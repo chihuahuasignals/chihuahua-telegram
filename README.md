@@ -1,0 +1,57 @@
+# Chihuahua Telegram
+
+Your own build of Telegram for Android with the account limit raised (32 accounts instead of 3).
+Nothing else in Telegram is changed. Built on GitHub's servers from the official
+[DrKLO/Telegram](https://github.com/DrKLO/Telegram) source (GPL v2).
+
+## Get the APK
+
+1. Open the **Actions** tab. A yellow dot = building (1–3 hours), green tick = done, red cross = failed.
+2. When it is green, open the **Releases** page on your phone and tap the `.apk` to install.
+3. Android will ask to allow installs from your browser — allow it once.
+
+Updates install over the old version and keep all your logins, because every build is signed with the same key.
+
+## First-time setup (once)
+
+Repository **Settings → Secrets and variables → Actions → New repository secret**, four times:
+
+| Name | Value |
+|---|---|
+| `TG_API_ID` | your api_id from https://my.telegram.org |
+| `TG_API_HASH` | your api_hash from https://my.telegram.org |
+| `KEYSTORE_BASE64` | contents of `keystore-base64.txt` (the signing key, one long line) |
+| `KEYSTORE_PASSWORD` | contents of `keystore-password.txt` |
+
+Keep `chihuahua-release.jks` and its password somewhere safe. Lose them and future builds
+cannot update the installed app — you would have to uninstall and log in again.
+
+## Change something
+
+Edit `config.env` on GitHub (pencil icon), commit, and a new build starts automatically.
+
+- `APP_NAME` — the name under the icon.
+- `MAX_ACCOUNTS` — the account cap (32).
+- `TELEGRAM_COMMIT` — which Telegram version to build. To update to a newer Telegram, put the newest
+  commit id from https://github.com/DrKLO/Telegram/commits/master here. If Telegram moved things
+  around, the build fails with a clear "anchor found 0x" message in `customize.py` — that needs a small fix.
+- `icons/` — the launcher icon PNGs (Twemoji dog, CC-BY 4.0).
+
+You can also press **Actions → Build Android APK → Run workflow** to rebuild without changing anything.
+
+## After installing
+
+- Settings → Notifications and Sounds → scroll to the bottom → turn on **Keep-Alive Service** and
+  **Background Connection**. This app cannot use Google push notifications (that needs a Firebase
+  project registered to this package name), so it keeps its own connection open instead.
+- Log-in codes for a third-party app are usually delivered to your existing Telegram session, not by SMS.
+  Keep each account logged in on the official app the first time you add it here.
+- Telegram's anti-spam runs on their servers. Many accounts on one phone doing marketing-like
+  things get restricted no matter which app is used.
+
+## Files
+
+- `.github/workflows/build-android.yml` — the build recipe GitHub runs.
+- `customize.py` — the changes applied to Telegram's source (account limit, name, package, icon, API keys).
+- `config.env` — the settings above.
+- `icons/` — launcher icons.
