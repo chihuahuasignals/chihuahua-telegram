@@ -536,6 +536,46 @@ def patch_add_to_group():
     ])
 
 
+
+def patch_theme98():
+    """Windows 98 colour theme: bundled as an asset theme, listed in Settings → Chat Settings,
+    and applied once on first start of a build that has it. Also the chat-list title."""
+    src = HERE / "patches" / "chihuahua98.attheme"
+    if not src.exists():
+        fail(f"missing {src}")
+        return
+    shutil.copy(src, ROOT / "TMessagesProj/src/main/assets/chihuahua98.attheme")
+    night_reg = '        sortAccents(themeInfo);\n        themes.add(themeInfo);\n        themesDict.put("Night", themeInfo);\n'
+    night_pref = '            theme = preferences.getString("nighttheme", null);\n'
+    edit("TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java", [
+        (night_reg, night_reg +
+         '\n        themeInfo = new ThemeInfo();\n'
+         '        themeInfo.name = "Chihuahua 98";\n'
+         '        themeInfo.assetName = "chihuahua98.attheme";\n'
+         '        themeInfo.previewBackgroundColor = 0xff008080;\n'
+         '        themeInfo.previewInColor = 0xffffffff;\n'
+         '        themeInfo.previewOutColor = 0xffc0c0c0;\n'
+         '        themeInfo.sortIndex = 5;\n'
+         '        themes.add(themeInfo);\n'
+         '        themesDict.put("Chihuahua 98", themeInfo);\n', 1),
+        (night_pref,
+         '            if (!themeConfig.getBoolean("chihuahua98_applied", false)) {\n'
+         '                ThemeInfo chihuahuaTheme = themesDict.get("Chihuahua 98");\n'
+         '                if (chihuahuaTheme != null) {\n'
+         '                    applyingTheme = chihuahuaTheme;\n'
+         '                    themeConfig.edit().putBoolean("chihuahua98_applied", true).commit();\n'
+         '                    preferences.edit().putString("theme", chihuahuaTheme.getKey()).putInt("selectedAutoNightType", AUTO_NIGHT_TYPE_NONE).commit();\n'
+         '                }\n'
+         '            }\n' + night_pref, 1),
+    ])
+    # Chat-list title: the official app draws the Telegram wordmark image here; show "Chihuahua" as text instead.
+    edit("TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java", [
+        ('                SpannableStringBuilder ssb = new SpannableStringBuilder(getString(R.string.AppName));\n'
+         '                ssb.setSpan(new ImageSpan(logoDrawable), 0, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);\n',
+         '                SpannableStringBuilder ssb = new SpannableStringBuilder("Chihuahua");\n', 1),
+    ])
+
+
 def install_icons():
     res = ROOT / "TMessagesProj/src/main/res"
     for d in DENSITIES:
@@ -596,6 +636,7 @@ def main():
     patch_account_type()
     patch_add_to_group()
     patch_settings_and_toggles()
+    patch_theme98()
     install_icons()
     if errors:
         print(f"\n{len(errors)} problem(s) — the Telegram source no longer matches the anchors above.")
