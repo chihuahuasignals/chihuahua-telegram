@@ -558,6 +558,10 @@ def patch_theme98():
          '        themeInfo.sortIndex = 5;\n'
          '        themes.add(themeInfo);\n'
          '        themesDict.put("Chihuahua 98", themeInfo);\n', 1),
+        # ThemeInfo.isDark() only knows the five built-in names; anything else is treated as a
+        # file theme and dereferences pathToFile (null for an asset theme) -> NPE at startup.
+        ('            } else if ("Blue".equals(name) || "Arctic Blue".equals(name) || "Day".equals(name)) {\n',
+         '            } else if ("Blue".equals(name) || "Arctic Blue".equals(name) || "Day".equals(name) || "Chihuahua 98".equals(name)) {\n', 1),
         (night_pref,
          '            if (!themeConfig.getBoolean("chihuahua98_applied", false)) {\n'
          '                ThemeInfo chihuahuaTheme = themesDict.get("Chihuahua 98");\n'

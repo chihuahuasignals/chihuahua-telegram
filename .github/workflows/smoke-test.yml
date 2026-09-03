@@ -2,10 +2,19 @@ name: Smoke test in emulator
 
 # Builds an x86_64 copy of the app, starts it in an Android emulator and checks that it
 # stays alive. Results (status, screenshot, crash log) are pushed to the smoke-status branch.
-# Manual only (Actions → Smoke test in emulator → Run workflow): it costs ~1 hour of runner time.
+# Runs on every app-code push while the repo is public (free minutes); otherwise run it manually.
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - config.env
+      - customize.py
+      - patches/**
+      - icons/**
+      - smoke/**
+      - .github/workflows/smoke-test.yml
 
 permissions:
   contents: write
