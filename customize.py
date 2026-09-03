@@ -143,10 +143,10 @@ NATIVE_GETINSTANCE_NEW = (
     "ConnectionsManager& ConnectionsManager::getInstance(int32_t instanceNum) {\n"
     "    // Chihuahua: one native instance per account slot. Upstream had a fixed switch of 5,\n"
     "    // so every account beyond slot 4 shared instance 4 and re-ran init() on it (crash at start).\n"
-    "    static std::atomic<ConnectionsManager*> instances[CHIHUAHUA_MAX_ACCOUNTS];\n"
+    "    static std::atomic<ConnectionsManager*> instances[MAX_ACCOUNT_COUNT];\n"
     "    static std::mutex instancesMutex;\n"
-    "    if (instanceNum < 0 || instanceNum >= CHIHUAHUA_MAX_ACCOUNTS) {\n"
-    "        instanceNum = CHIHUAHUA_MAX_ACCOUNTS - 1;\n"
+    "    if (instanceNum < 0 || instanceNum >= MAX_ACCOUNT_COUNT) {\n"
+    "        instanceNum = MAX_ACCOUNT_COUNT - 1;\n"
     "    }\n"
     "    ConnectionsManager *instance = instances[instanceNum].load(std::memory_order_acquire);\n"
     "    if (instance == nullptr) {\n"
@@ -163,11 +163,16 @@ NATIVE_GETINSTANCE_NEW = (
 
 
 def patch_native_account_limit():
-    """The C++ network layer (tgnet) only had room for 5 accounts. Give it MAX_ACCOUNTS."""
+    """The C++ network layer (tgnet) only had room for 5 accounts, in two places:
+    MAX_ACCOUNT_COUNT (sizes the per-account JNIEnv array and the delegate loop — slot 5+
+    wrote past the end of that array and corrupted neighbouring globals) and the fixed
+    switch in ConnectionsManager::getInstance(). Give both MAX_ACCOUNTS."""
+    edit("TMessagesProj/jni/tgnet/Defines.h", [
+        ("#define MAX_ACCOUNT_COUNT 5\n", f"#define MAX_ACCOUNT_COUNT {MAX_ACCOUNTS}\n", 1),
+    ])
     edit("TMessagesProj/jni/tgnet/ConnectionsManager.cpp", [
         ('#include "ConnectionsManager.h"\n',
-         '#include <atomic>\n#include <mutex>\n#include "ConnectionsManager.h"\n'
-         f"#define CHIHUAHUA_MAX_ACCOUNTS {MAX_ACCOUNTS}\n", 1),
+         '#include <atomic>\n#include <mutex>\n#include "ConnectionsManager.h"\n', 1),
         (NATIVE_GETINSTANCE_OLD, NATIVE_GETINSTANCE_NEW, 1),
     ])
 
