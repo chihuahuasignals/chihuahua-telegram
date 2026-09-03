@@ -29,6 +29,7 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
     private static final int ID_GHOST_READ = 4;
     private static final int ID_GHOST_TYPING = 5;
     private static final int ID_GHOST_OFFLINE = 6;
+    private static final int ID_BACK_CAMERA = 7;
     private static final int ID_VERSION = 10;
     private static final int ID_ACCOUNTS = 11;
     private static final int ID_SOURCE = 12;
@@ -73,6 +74,10 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
         items.add(UItem.asCheck(ID_GHOST_OFFLINE, "Stay offline").setChecked(ChihuahuaConfig.ghostOffline()));
         items.add(UItem.asShadow("Read receipts: senders never see blue ticks, voice messages never show as played, stories stay unseen. Because Telegram's servers are never told you read anything, unread badges can come back after a restart. Stay offline: your last seen freezes at the last time this was off."));
 
+        items.add(UItem.asHeader("Calls"));
+        items.add(UItem.asCheck(ID_BACK_CAMERA, "Start video calls with the back camera").setChecked(ChihuahuaConfig.backCameraDefault()));
+        items.add(UItem.asShadow("Applies to video calls and video in group calls. The flip-camera button still works as usual."));
+
         items.add(UItem.asHeader("Telegram Premium"));
         items.add(UItem.asCheck(ID_HIDE_PREMIUM, "Hide Premium promotions").setChecked(ChihuahuaConfig.hidePremium()));
         items.add(UItem.asShadow("Hides the Premium entry in Settings and most upgrade banners. Premium features you already pay for keep working."));
@@ -99,6 +104,8 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
                 key = ChihuahuaConfig.KEY_GHOST_TYPING;
             } else if (item.id == ID_GHOST_OFFLINE) {
                 key = ChihuahuaConfig.KEY_GHOST_OFFLINE;
+            } else if (item.id == ID_BACK_CAMERA) {
+                key = ChihuahuaConfig.KEY_BACK_CAMERA;
             } else {
                 return;
             }

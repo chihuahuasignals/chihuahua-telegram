@@ -4,7 +4,7 @@ Your own build of Telegram for Android with the account limit raised (32 account
 
 - **Add to Group**, **Copy ID** and **Ban from all my groups** in every user's profile menu (⋮); **Copy ID** in group/channel menus too.
 - The user's ID shown next to their online status in profiles (switchable).
-- **Settings → Chihuahua**: ghost mode (no read receipts, no typing indicator, stay offline), hide the Stories bar, hide Telegram Premium promotions, toggle the ID display.
+- **Settings → Chihuahua**: ghost mode (no read receipts, no typing indicator, stay offline), video calls start with the back camera, hide the Stories bar, hide Telegram Premium promotions, toggle the ID display.
 
 Nothing else in Telegram is changed. Built on GitHub's servers from the official
 [DrKLO/Telegram](https://github.com/DrKLO/Telegram) source (GPL v2).

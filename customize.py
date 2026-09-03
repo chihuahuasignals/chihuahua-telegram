@@ -475,6 +475,10 @@ def patch_settings_and_toggles():
          "            return;\n"
          "        }\n", 1),
     ])
+    edit("TMessagesProj/src/main/java/org/telegram/messenger/voip/VoIPService.java", [
+        ("\tprivate boolean isFrontFaceCamera = true;\n",
+         "\tprivate boolean isFrontFaceCamera = !org.telegram.messenger.ChihuahuaConfig.backCameraDefault();\n", 1),
+    ])
     edit("TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java", [
         ("            newVisibility = !getStoriesController().getHiddenList().isEmpty();\n",
          "            newVisibility = !org.telegram.messenger.ChihuahuaConfig.hideStories() && !getStoriesController().getHiddenList().isEmpty();\n", 1),

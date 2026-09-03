@@ -23,6 +23,7 @@ public class ChihuahuaConfig {
     public static final String KEY_GHOST_READ = "ghost_read";
     public static final String KEY_GHOST_TYPING = "ghost_typing";
     public static final String KEY_GHOST_OFFLINE = "ghost_offline";
+    public static final String KEY_BACK_CAMERA = "back_camera";
 
     /** SHA-256 of ("chihuahua:" + activation code), filled in at build time. Empty = no lock. */
     public static final String ACTIVATION_HASH = "%%ACTIVATION_HASH%%";
@@ -35,6 +36,7 @@ public class ChihuahuaConfig {
     private static boolean ghostRead = false;
     private static boolean ghostTyping = false;
     private static boolean ghostOffline = false;
+    private static boolean backCamera = true;
 
     private static SharedPreferences prefs() {
         return ApplicationLoader.applicationContext.getSharedPreferences("chihuahua", Context.MODE_PRIVATE);
@@ -55,6 +57,7 @@ public class ChihuahuaConfig {
             ghostRead = p.getBoolean(KEY_GHOST_READ, false);
             ghostTyping = p.getBoolean(KEY_GHOST_TYPING, false);
             ghostOffline = p.getBoolean(KEY_GHOST_OFFLINE, false);
+            backCamera = p.getBoolean(KEY_BACK_CAMERA, true);
             loaded = true;
         }
     }
@@ -87,6 +90,12 @@ public class ChihuahuaConfig {
     public static boolean ghostOffline() {
         load();
         return ghostOffline;
+    }
+
+    /** Video calls (and group-call video) start with the back camera instead of the selfie camera. */
+    public static boolean backCameraDefault() {
+        load();
+        return backCamera;
     }
 
     public static boolean ghostModeActive() {
@@ -176,6 +185,8 @@ public class ChihuahuaConfig {
                 return ghostTyping;
             case KEY_GHOST_OFFLINE:
                 return ghostOffline;
+            case KEY_BACK_CAMERA:
+                return backCamera;
             default:
                 return false;
         }
@@ -201,6 +212,9 @@ public class ChihuahuaConfig {
                 break;
             case KEY_GHOST_OFFLINE:
                 ghostOffline = value;
+                break;
+            case KEY_BACK_CAMERA:
+                backCamera = value;
                 break;
             default:
                 return;
