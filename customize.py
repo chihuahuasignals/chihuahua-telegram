@@ -116,6 +116,62 @@ def patch_account_limit():
     ])
 
 
+NATIVE_GETINSTANCE_OLD = (
+    "ConnectionsManager& ConnectionsManager::getInstance(int32_t instanceNum) {\n"
+    "    switch (instanceNum) {\n"
+    "        case 0:\n"
+    "            static ConnectionsManager instance0(0);\n"
+    "            return instance0;\n"
+    "        case 1:\n"
+    "            static ConnectionsManager instance1(1);\n"
+    "            return instance1;\n"
+    "        case 2:\n"
+    "            static ConnectionsManager instance2(2);\n"
+    "            return instance2;\n"
+    "        case 3:\n"
+    "            static ConnectionsManager instance3(3);\n"
+    "            return instance3;\n"
+    "        case 4:\n"
+    "        default:\n"
+    "            static ConnectionsManager instance4(4);\n"
+    "            return instance4;\n"
+    "    }\n"
+    "}\n"
+)
+
+NATIVE_GETINSTANCE_NEW = (
+    "ConnectionsManager& ConnectionsManager::getInstance(int32_t instanceNum) {\n"
+    "    // Chihuahua: one native instance per account slot. Upstream had a fixed switch of 5,\n"
+    "    // so every account beyond slot 4 shared instance 4 and re-ran init() on it (crash at start).\n"
+    "    static std::atomic<ConnectionsManager*> instances[CHIHUAHUA_MAX_ACCOUNTS];\n"
+    "    static std::mutex instancesMutex;\n"
+    "    if (instanceNum < 0 || instanceNum >= CHIHUAHUA_MAX_ACCOUNTS) {\n"
+    "        instanceNum = CHIHUAHUA_MAX_ACCOUNTS - 1;\n"
+    "    }\n"
+    "    ConnectionsManager *instance = instances[instanceNum].load(std::memory_order_acquire);\n"
+    "    if (instance == nullptr) {\n"
+    "        std::lock_guard<std::mutex> lock(instancesMutex);\n"
+    "        instance = instances[instanceNum].load(std::memory_order_relaxed);\n"
+    "        if (instance == nullptr) {\n"
+    "            instance = new ConnectionsManager(instanceNum);\n"
+    "            instances[instanceNum].store(instance, std::memory_order_release);\n"
+    "        }\n"
+    "    }\n"
+    "    return *instance;\n"
+    "}\n"
+)
+
+
+def patch_native_account_limit():
+    """The C++ network layer (tgnet) only had room for 5 accounts. Give it MAX_ACCOUNTS."""
+    edit("TMessagesProj/jni/tgnet/ConnectionsManager.cpp", [
+        ('#include "ConnectionsManager.h"\n',
+         '#include <atomic>\n#include <mutex>\n#include "ConnectionsManager.h"\n'
+         f"#define CHIHUAHUA_MAX_ACCOUNTS {MAX_ACCOUNTS}\n", 1),
+        (NATIVE_GETINSTANCE_OLD, NATIVE_GETINSTANCE_NEW, 1),
+    ])
+
+
 def patch_build_vars():
     edit("TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java", [
         ("public static int APP_ID = 4;", f"public static int APP_ID = {TG_API_ID};", 1),
@@ -254,6 +310,7 @@ def main():
     check_inputs()
     patch_gradle_properties()
     patch_account_limit()
+    patch_native_account_limit()
     patch_build_vars()
     patch_app_name()
     patch_abis()
