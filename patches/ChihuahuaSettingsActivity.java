@@ -30,6 +30,7 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
     private static final int ID_GHOST_TYPING = 5;
     private static final int ID_GHOST_OFFLINE = 6;
     private static final int ID_BACK_CAMERA = 7;
+    private static final int ID_ACCOUNT_AGE = 8;
     private static final int ID_VERSION = 10;
     private static final int ID_ACCOUNTS = 11;
     private static final int ID_SOURCE = 12;
@@ -62,7 +63,8 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
     private void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
         items.add(UItem.asHeader("Profiles"));
         items.add(UItem.asCheck(ID_SHOW_ID, "Show user ID under the name").setChecked(ChihuahuaConfig.showIdInProfile()));
-        items.add(UItem.asShadow("Every profile's ⋮ menu also has Copy ID, Add to Group and Ban from all my groups."));
+        items.add(UItem.asCheck(ID_ACCOUNT_AGE, "Show estimated account age").setChecked(ChihuahuaConfig.showAccountAge()));
+        items.add(UItem.asShadow("Tap the ID line to copy the ID. Telegram hands out IDs in order, so the ID dates an account to within a month or two (\"est. Jun 2026\") — a brand-new account is a common spam sign. Every profile's ⋮ menu also has Copy ID, Add to Group and Ban from all my groups."));
 
         items.add(UItem.asHeader("Chat list"));
         items.add(UItem.asCheck(ID_HIDE_STORIES, "Hide the Stories bar").setChecked(ChihuahuaConfig.hideStories()));
@@ -106,6 +108,8 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
                 key = ChihuahuaConfig.KEY_GHOST_OFFLINE;
             } else if (item.id == ID_BACK_CAMERA) {
                 key = ChihuahuaConfig.KEY_BACK_CAMERA;
+            } else if (item.id == ID_ACCOUNT_AGE) {
+                key = ChihuahuaConfig.KEY_ACCOUNT_AGE;
             } else {
                 return;
             }

@@ -520,7 +520,8 @@ def patch_add_to_group():
          "                    onlineTextView[a].setOnClickListener(v -> {\n"
          "                        AndroidUtilities.addToClipboard(String.valueOf(chihuahuaUserId));\n"
          "                        if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {\n"
-         "                            BulletinFactory.of(ProfileActivity.this).createCopyBulletin(\"ID \" + chihuahuaUserId + \" copied\").show();\n"
+         "                            String chihuahuaCreated = org.telegram.messenger.ChihuahuaConfig.estimatedCreation(chihuahuaUserId);\n"
+         "                            BulletinFactory.of(ProfileActivity.this).createCopyBulletin(\"ID \" + chihuahuaUserId + \" copied\" + (chihuahuaCreated.isEmpty() ? \"\" : \" \u00b7 account created about \" + chihuahuaCreated)).show();\n"
          "                        }\n"
          "                    });\n"
          "                } else if (a == 1) {\n"
@@ -531,7 +532,7 @@ def patch_add_to_group():
         (STATUS_ANCHOR,
          STATUS_ANCHOR +
          "                if (org.telegram.messenger.ChihuahuaConfig.showIdInProfile()) {\n"
-         "                    newString2 = newString2 + \" \u00b7 ID \" + user.id;\n"
+         "                    newString2 = newString2 + \" \u00b7 ID \" + user.id + org.telegram.messenger.ChihuahuaConfig.accountAgeSuffix(user.id);\n"
          "                }\n", 1),
     ])
 

@@ -17,6 +17,8 @@ TOOLTIP = "#FFFFE1"   # tooltip yellow
 LIGHT = "#E0E0E0"
 SKY = "#80D8FF"       # light text on the navy bar (online status)
 PRESSED = "#A8A8A8"
+PAPER = "#F0F0F0"     # list/card surfaces (off-white, easier on the eyes than pure white)
+BODY = "#D4D0C8"      # background between cards (the warm Windows 2000 face grey)
 FIELD = "#FFFFFF"
 # Windows 16-colour palette for avatars / sender names
 MAROON, OLIVE, PURPLE, FUCHSIA = "#800000", "#808000", "#800080", "#C000C0"
@@ -46,9 +48,11 @@ put(SHADOW, "actionBarDefaultSubmenuSeparator", "actionBarActionModeDefaultTop")
 put(PRESSED, "actionBarActionModeDefaultSelector", "actionBarWhiteSelector")
 
 # --- windows, lists, text
-put(WHITE, "windowBackgroundWhite", "dialogSearchBackground", "chat_emojiSearchBackground", "chat_inBubble", "chat_inBubbleSelected",
+put(PAPER, "windowBackgroundWhite")
+put(WHITE, "dialogSearchBackground", "chat_emojiSearchBackground", "chat_inBubble", "chat_inBubbleSelected",
     "chat_inAudioProgress", "chat_inFileProgress", "chat_inMediaIcon")
-put(FACE, "windowBackgroundGray", "graySection", "dialogBackground", "chats_menuBackground", "chat_messagePanelBackground",
+put(BODY, "windowBackgroundGray", "graySection")
+put(FACE, "dialogBackground", "chats_menuBackground", "chat_messagePanelBackground",
     "chat_topPanelBackground", "chat_emojiPanelBackground", "chat_unreadMessagesStartBackground", "chat_goDownButton",
     "player_background", "inappPlayerBackground", "chat_botKeyboardButtonBackground", "groupcreate_spanBackground",
     "glass_targetMainTabs", "glass_targetMainTopPanel", "chat_outBubble", "chat_outAudioProgress", "chat_outFileProgress",
