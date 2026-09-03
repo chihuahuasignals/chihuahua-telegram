@@ -418,6 +418,50 @@ ACTIVATION_GATE = (
 )
 
 
+ID_ROW_BIND = """                    } else if (position == chihuahuaIdRow) {
+                        detailCell.setTextAndValue(String.valueOf(userId), "ID \\u00b7 tap to copy", true);
+"""
+
+
+def patch_id_row():
+    """The user ID gets its own row in the profile (same cell style as the phone number), so the
+    status line above keeps room for the last-seen text and the estimated creation date. Tapping
+    the row copies the ID."""
+    pa = "TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java"
+    edit(pa, [
+        # field + reset, next to the phone row it sits under
+        ("    private int phoneRow;\n", "    private int phoneRow;\n    private int chihuahuaIdRow;\n", 1),
+        ("        phoneRow = -1;\n", "        phoneRow = -1;\n        chihuahuaIdRow = -1;\n", 1),
+        # the row itself, right after the phone row of a user profile
+        ("                if (!isBot && (hasPhone || !hasInfo)) {\n                    phoneRow = rowCount++;\n                }\n",
+         "                if (!isBot && (hasPhone || !hasInfo)) {\n                    phoneRow = rowCount++;\n                }\n"
+         "                if (userId != 0 && org.telegram.messenger.ChihuahuaConfig.showIdInProfile()) {\n"
+         "                    chihuahuaIdRow = rowCount++;\n                }\n", 1),
+        # same cell type as the phone row
+        ("            } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow) {\n                return VIEW_TYPE_TEXT_DETAIL;\n",
+         "            } else if (position == phoneRow || position == locationRow || position == numberRow || position == birthdayRow || position == chihuahuaIdRow) {\n                return VIEW_TYPE_TEXT_DETAIL;\n", 1),
+        # contents
+        ("                    } else if (position == phoneRow) {\n                        String text;\n",
+         ID_ROW_BIND + "                    } else if (position == phoneRow) {\n                        String text;\n", 1),
+        # tap copies the ID and names the estimated creation month
+        ("            listView.stopScroll();\n            if (position == affiliateRow) {\n",
+         "            listView.stopScroll();\n"
+         "            if (position == chihuahuaIdRow) {\n"
+         "                AndroidUtilities.addToClipboard(String.valueOf(userId));\n"
+         "                if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {\n"
+         "                    String chihuahuaCreated = org.telegram.messenger.ChihuahuaConfig.estimatedCreation(userId);\n"
+         "                    BulletinFactory.of(ProfileActivity.this).createCopyBulletin(\"ID \" + userId + \" copied\" + (chihuahuaCreated.isEmpty() ? \"\" : \" \\u00b7 account created about \" + chihuahuaCreated)).show();\n"
+         "                }\n"
+         "            } else if (position == affiliateRow) {\n", 1),
+        # the phone row now has a row under it, so give it a divider
+        ("detailCell.setTextAndValue(text, LocaleController.getString(isFragmentPhoneNumber ? R.string.AnonymousNumber : R.string.PhoneMobile), false);",
+         "detailCell.setTextAndValue(text, LocaleController.getString(isFragmentPhoneNumber ? R.string.AnonymousNumber : R.string.PhoneMobile), chihuahuaIdRow != -1);", 1),
+        # keep list animations happy
+        ("            put(++pointer, phoneRow, sparseIntArray);\n",
+         "            put(++pointer, phoneRow, sparseIntArray);\n            put(++pointer, chihuahuaIdRow, sparseIntArray);\n", 1),
+    ])
+
+
 def patch_settings_and_toggles():
     """Settings → Chihuahua screen (new classes copied from patches/) plus the switches it controls:
     hide the Stories bar, hide Premium promotions, show IDs in profiles."""
@@ -512,27 +556,11 @@ def patch_add_to_group():
         # "Copy ID" in a group/channel profile menu
         (CHAT_MENU_ANCHOR,
          CHAT_MENU_ANCHOR + "            otherItem.addSubItem(chihuahua_copy_id, R.drawable.msg_copy, \"Copy ID\");\n", 1),
-        # tapping the status line copies the ID
-        (STATUS_SET_ANCHOR,
-         STATUS_SET_ANCHOR +
-         "                if (a == 1 && org.telegram.messenger.ChihuahuaConfig.showIdInProfile()) {\n"
-         "                    final long chihuahuaUserId = user.id;\n"
-         "                    onlineTextView[a].setOnClickListener(v -> {\n"
-         "                        AndroidUtilities.addToClipboard(String.valueOf(chihuahuaUserId));\n"
-         "                        if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {\n"
-         "                            String chihuahuaCreated = org.telegram.messenger.ChihuahuaConfig.estimatedCreation(chihuahuaUserId);\n"
-         "                            BulletinFactory.of(ProfileActivity.this).createCopyBulletin(\"ID \" + chihuahuaUserId + \" copied\" + (chihuahuaCreated.isEmpty() ? \"\" : \" \u00b7 account created about \" + chihuahuaCreated)).show();\n"
-         "                        }\n"
-         "                    });\n"
-         "                } else if (a == 1) {\n"
-         "                    onlineTextView[a].setOnClickListener(null);\n"
-         "                    onlineTextView[a].setClickable(false);\n"
-         "                }\n", 1),
         # user ID next to the online status under the name (toggle in Settings → Chihuahua)
         (STATUS_ANCHOR,
          STATUS_ANCHOR +
          "                if (org.telegram.messenger.ChihuahuaConfig.showIdInProfile()) {\n"
-         "                    newString2 = newString2 + org.telegram.messenger.ChihuahuaConfig.accountAgeSuffix(user.id) + \" \u00b7 ID \" + user.id;\n"
+         "                    newString2 = newString2 + org.telegram.messenger.ChihuahuaConfig.accountAgeSuffix(user.id);\n"
          "                }\n", 1),
     ])
 
@@ -582,6 +610,7 @@ def patch_theme98():
     patch_glass_header()
     patch_profile_header()
     patch_per_account_notifications()
+    patch_id_row()
 
 
 def patch_per_account_notifications():

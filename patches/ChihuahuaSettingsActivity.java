@@ -69,7 +69,7 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
         items.add(UItem.asHeader("Profiles"));
         items.add(UItem.asCheck(ID_SHOW_ID, "Show user ID under the name").setChecked(ChihuahuaConfig.showIdInProfile()));
         items.add(UItem.asCheck(ID_ACCOUNT_AGE, "Show estimated account age").setChecked(ChihuahuaConfig.showAccountAge()));
-        items.add(UItem.asShadow("Tap the ID line to copy the ID. Telegram hands out IDs in order, so the ID dates an account to within a month or two (\"3mo old\") — a brand-new account is a common spam sign. Every profile's ⋮ menu also has Copy ID, Add to Group and Ban from all my groups."));
+        items.add(UItem.asShadow("The ID has its own row in the profile; tap it to copy. Telegram hands out IDs in order, so the ID dates an account to within a month or two (\"est. Nov 2025\") — a brand-new account is a common spam sign. Every profile's ⋮ menu also has Copy ID, Add to Group and Ban from all my groups."));
 
         int activated = 0;
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
