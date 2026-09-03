@@ -139,6 +139,38 @@ public class ChihuahuaConfig {
         return false;
     }
 
+    // ---- per-account notifications -----------------------------------------------------------
+    // Telegram only has one global "show notifications from all accounts" switch. With many
+    // accounts logged in you usually want a handful noisy and the rest silent, so every account
+    // gets its own switch (Settings -> Chihuahua -> Notifications). Silenced accounts post no
+    // notification, make no sound, and are left out of the launcher badge count.
+    private static final java.util.concurrent.ConcurrentHashMap<Integer, Boolean> notifyByAccount = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static String notifyKey(int account) {
+        return "notify_account_" + account;
+    }
+
+    /** False when this account's notifications were switched off in Settings -> Chihuahua. */
+    public static boolean notificationsEnabled(int account) {
+        if (ApplicationLoader.applicationContext == null) {
+            return true;
+        }
+        Boolean cached = notifyByAccount.get(account);
+        if (cached != null) {
+            return cached;
+        }
+        boolean value = prefs().getBoolean(notifyKey(account), true);
+        notifyByAccount.put(account, value);
+        return value;
+    }
+
+    public static void setNotificationsEnabled(int account, boolean enabled) {
+        notifyByAccount.put(account, enabled);
+        if (ApplicationLoader.applicationContext != null) {
+            prefs().edit().putBoolean(notifyKey(account), enabled).apply();
+        }
+    }
+
     // ---- account age from the user ID -------------------------------------------------------
     // Telegram hands out user IDs in increasing order, so an ID roughly dates the account.
     // Anchors: the widely used first-seen table for IDs below 2.15e9, the November 2021 jump

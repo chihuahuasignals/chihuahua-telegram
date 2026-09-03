@@ -7,7 +7,10 @@ import android.widget.FrameLayout;
 
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.ChihuahuaConfig;
+import org.telegram.messenger.NotificationsController;
+import org.telegram.messenger.UserObject;
 import org.telegram.messenger.UserConfig;
+import org.telegram.tgnet.TLRPC;
 import org.telegram.messenger.browser.Browser;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.BackDrawable;
@@ -31,6 +34,8 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
     private static final int ID_GHOST_OFFLINE = 6;
     private static final int ID_BACK_CAMERA = 7;
     private static final int ID_ACCOUNT_AGE = 8;
+    /** Notification rows use ID_NOTIFY_BASE + account index. */
+    private static final int ID_NOTIFY_BASE = 100;
     private static final int ID_VERSION = 10;
     private static final int ID_ACCOUNTS = 11;
     private static final int ID_SOURCE = 12;
@@ -66,6 +71,33 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
         items.add(UItem.asCheck(ID_ACCOUNT_AGE, "Show estimated account age").setChecked(ChihuahuaConfig.showAccountAge()));
         items.add(UItem.asShadow("Tap the ID line to copy the ID. Telegram hands out IDs in order, so the ID dates an account to within a month or two (\"est. Jun 2026\") — a brand-new account is a common spam sign. Every profile's ⋮ menu also has Copy ID, Add to Group and Ban from all my groups."));
 
+        int activated = 0;
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (UserConfig.getInstance(a).isClientActivated()) {
+                activated++;
+            }
+        }
+        if (activated > 1) {
+            items.add(UItem.asHeader("Notifications"));
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                UserConfig config = UserConfig.getInstance(a);
+                if (!config.isClientActivated()) {
+                    continue;
+                }
+                TLRPC.User user = config.getCurrentUser();
+                String name = user == null ? ("Account " + (a + 1)) : UserObject.getUserName(user);
+                String subtext = ChihuahuaConfig.notificationsEnabled(a) ? "On" : "Off";
+                String username = user == null ? null : UserObject.getPublicUsername(user);
+                if (username != null && !username.isEmpty()) {
+                    subtext = subtext + " \u00b7 @" + username;
+                } else if (user != null && user.phone != null && !user.phone.isEmpty()) {
+                    subtext = subtext + " \u00b7 +" + user.phone;
+                }
+                items.add(UItem.asButtonCheck(ID_NOTIFY_BASE + a, name, subtext).setChecked(ChihuahuaConfig.notificationsEnabled(a)));
+            }
+            items.add(UItem.asShadow("Switch an account off and it posts no notifications, makes no sound and is left out of the badge count \u2014 the other accounts keep notifying. Messages still arrive; you just see them when you open that account."));
+        }
+
         items.add(UItem.asHeader("Chat list"));
         items.add(UItem.asCheck(ID_HIDE_STORIES, "Hide the Stories bar").setChecked(ChihuahuaConfig.hideStories()));
         items.add(UItem.asShadow("Removes the row of story avatars above the chat list. Stories stay reachable from profiles."));
@@ -92,6 +124,17 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
     }
 
     private void onClick(UItem item, View view, int position, float x, float y) {
+        if (item.id >= ID_NOTIFY_BASE && item.id < ID_NOTIFY_BASE + UserConfig.MAX_ACCOUNT_COUNT) {
+            final int account = item.id - ID_NOTIFY_BASE;
+            final boolean enabled = !ChihuahuaConfig.notificationsEnabled(account);
+            ChihuahuaConfig.setNotificationsEnabled(account, enabled);
+            // Drops the notification that is already on screen for a freshly silenced account.
+            NotificationsController.getInstance(account).showNotifications();
+            if (listView != null && listView.adapter != null) {
+                listView.adapter.update(true);
+            }
+            return;
+        }
         if (item.viewType == UniversalAdapter.VIEW_TYPE_CHECK) {
             String key;
             if (item.id == ID_SHOW_ID) {

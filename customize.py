@@ -581,6 +581,28 @@ def patch_theme98():
     ])
     patch_glass_header()
     patch_profile_header()
+    patch_per_account_notifications()
+
+
+def patch_per_account_notifications():
+    """Telegram has one global "show notifications from all accounts" switch. With many accounts
+    logged in you want most of them silent, so each account gets its own switch (Settings ->
+    Chihuahua -> Notifications). A silenced account posts no notification (the existing one is
+    dismissed, exactly as Telegram already does for non-selected accounts), plays no in-app sound,
+    and does not count towards the launcher badge."""
+    nc = "TMessagesProj/src/main/java/org/telegram/messenger/NotificationsController.java"
+    edit(nc, [
+        # the one funnel every posted notification goes through
+        ("        if (!getUserConfig().isClientActivated() || pushMessages.isEmpty() && storyPushMessages.isEmpty() || !SharedConfig.showNotificationsForAllAccounts && currentAccount != UserConfig.selectedAccount) {\n",
+         "        if (!getUserConfig().isClientActivated() || !ChihuahuaConfig.notificationsEnabled(currentAccount) || pushMessages.isEmpty() && storyPushMessages.isEmpty() || !SharedConfig.showNotificationsForAllAccounts && currentAccount != UserConfig.selectedAccount) {\n", 1),
+        # launcher badge total
+        ("            if (!SharedConfig.showNotificationsForAllAccounts && UserConfig.selectedAccount != a) {\n                continue;\n            }\n",
+         "            if (!SharedConfig.showNotificationsForAllAccounts && UserConfig.selectedAccount != a) {\n                continue;\n            }\n"
+         "            if (!ChihuahuaConfig.notificationsEnabled(a)) {\n                continue;\n            }\n", 1),
+        # sound played while the chat is open
+        ("    private void playInChatSound() {\n        if (!inChatSoundEnabled || MediaController.getInstance().isRecordingAudio()) {\n",
+         "    private void playInChatSound() {\n        if (!inChatSoundEnabled || !ChihuahuaConfig.notificationsEnabled(currentAccount) || MediaController.getInstance().isRecordingAudio()) {\n", 1),
+    ])
 
 
 def patch_profile_header():
