@@ -33,8 +33,12 @@ put(WHITE, "actionBarDefaultIcon", "actionBarDefaultTitle", "actionBarDefaultSea
     "avatar_actionBarIconBlue", "profile_title", "chats_menuName", "actionBarDefaultArchivedIcon", "actionBarDefaultArchivedTitle",
     "actionBarDefaultArchivedSearch", "chats_tabUnreadActiveBackground")
 put(FACE, "actionBarDefaultSubtitle", "actionBarDefaultSearchPlaceholder", "actionBarTabUnactiveText", "avatar_subtitleInProfileBlue",
-    "profile_status", "chats_menuPhone", "chats_menuPhoneCats", "chats_tabUnreadUnactiveBackground", "actionBarDefaultSearchArchivedPlaceholder")
-put(SKY, "chat_status")   # "online" / "typing…" in the chat header, drawn on the navy bar
+    "chats_menuPhone", "chats_menuPhoneCats", "chats_tabUnreadUnactiveBackground", "actionBarDefaultSearchArchivedPlaceholder")
+put(SKY, "chat_status", "profile_status")   # "online" / "typing…" on the navy chat header and profile header
+# profile: navy header (avatar_backgroundActionBarBlue, see customize.py) with grey Win98 button tiles
+put(FACE, "profile_actionBackground")
+put(PRESSED, "profile_actionPressedBackground")
+put(BLACK, "profile_actionIcon")
 put(NAVY2, "actionBarDefaultSelector", "actionBarTabSelector", "avatar_actionBarSelectorBlue", "actionBarDefaultArchivedSelector")
 put(FACE, "actionBarDefaultSubmenuBackground", "actionBarActionModeDefault")
 put(BLACK, "actionBarDefaultSubmenuItem", "actionBarDefaultSubmenuItemIcon", "actionBarActionModeDefaultIcon")
@@ -97,17 +101,17 @@ put(NAVY, "windowBackgroundWhiteBlueText", "windowBackgroundWhiteBlueText2", "wi
     "chat_outSentClockSelected", "chat_serviceBackground", "chat_messagePanelSend", "chat_messagePanelCursor", "chat_messagePanelVoiceBackground",
     "chat_topPanelTitle", "chat_topPanelLine", "chat_emojiPanelIconSelected", "chat_emojiPanelStickerPackSelectorLine",
     "chat_emojiPanelStickerSetNameHighlight", "chat_goDownButtonCounterBackground", "chat_attachActiveTab",
-    "profile_actionBackground", "profile_tabSelectedText", "profile_tabSelectedLine", "profile_verifiedBackground", "profile_creatorIcon",
+    "profile_tabSelectedText", "profile_tabSelectedLine", "profile_verifiedBackground", "profile_creatorIcon",
     "fastScrollActive", "progressCircle", "contextProgressOuter1", "contextProgressOuter2", "contextProgressOuter3", "contextProgressOuter4",
     "player_progress", "player_buttonActive", "inappPlayerPerformer", "inappPlayerPlayPause", "groupcreate_sectionText", "groupcreate_cursor",
     "contacts_inviteBackground", "login_progressOuter", "featuredStickers_addButton", "featuredStickers_addedIcon", "featuredStickers_unread",
     "picker_enabledButton", "picker_badge", "undo_cancelColor", "glass_tabSelected", "glass_tabSelectedText", "telegram_color",
     "avatar_backgroundSaved", "avatar_background2Saved", "chat_serviceBackgroundSelected", "chat_inSentClock", "chat_inSentClockSelected",
     "chats_archivePinBackground", "chat_inPollCorrectAnswer", "chat_outPollCorrectAnswer")
-put(NAVY2, "chats_actionPressedBackground", "profile_actionPressedBackground", "dialogFloatingButtonPressed", "featuredStickers_addButtonPressed",
+put(NAVY2, "chats_actionPressedBackground", "dialogFloatingButtonPressed", "featuredStickers_addButtonPressed",
     "chat_messagePanelVoicePressed")
 put(WHITE, "chats_unreadCounterText", "chats_actionIcon", "chats_verifiedCheck", "chats_mentionIcon", "chats_archiveIcon", "chats_archiveText",
-    "profile_actionIcon", "profile_verifiedCheck", "dialogFloatingIcon", "dialogRoundCheckBoxCheck", "dialogCheckboxSquareCheck",
+    "profile_verifiedCheck", "dialogFloatingIcon", "dialogRoundCheckBoxCheck", "dialogCheckboxSquareCheck",
     "checkboxSquareCheck", "checkboxCheck", "windowBackgroundCheckText", "chat_serviceText", "chat_serviceLink", "chat_serviceIcon",
     "chat_messagePanelVoiceDuration", "chat_goDownButtonCounter", "contacts_inviteText",
     "featuredStickers_buttonText", "featuredStickers_buttonProgress", "picker_badgeText", "avatar_text", "switchTrackBlueThumbChecked",

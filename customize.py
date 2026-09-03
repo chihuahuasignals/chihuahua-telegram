@@ -579,6 +579,24 @@ def patch_theme98():
          '                SpannableStringBuilder ssb = new SpannableStringBuilder("Chihuahua");\n', 1),
     ])
     patch_glass_header()
+    patch_profile_header()
+
+
+def patch_profile_header():
+    """Telegram 12.x paints the profile header (avatar, name, status) on windowBackgroundGray but
+    colours the name/status/icons with the action-bar keys (profile_title, actionBarDefaultSubtitle,
+    actionBarDefaultIcon). With a navy action bar those are white/light grey — invisible on the grey
+    header: the "last seen · ID" line disappeared. Paint the header with avatar_backgroundActionBarBlue
+    (navy here; white/dark in Telegram's own themes, so those look the same as before) and let the
+    Message/Mute/Call/Video tiles take profile_actionBackground on dark action bars."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java", [
+        ("topView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));",
+         "topView.setBackgroundColor(getThemedColor(Theme.key_avatar_backgroundActionBarBlue));", 2),
+        ("new ThemeDescription(topView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_windowBackgroundGray)",
+         "new ThemeDescription(topView, ThemeDescription.FLAG_BACKGROUND, null, null, null, null, Theme.key_avatar_backgroundActionBarBlue)", 1),
+        ("                    btnColor = Theme.multAlpha(Theme.adaptHSV(getThemedColor(Theme.key_actionBarDefault), +0.02f, +0.25f), .35f);\n",
+         "                    btnColor = getThemedColor(Theme.key_profile_actionBackground);\n", 1),
+    ])
 
 
 GLASS_HEADER_PROVIDER = '''    // Chihuahua: the chat header pills (title, back, menu) take the action bar colour, so a theme
