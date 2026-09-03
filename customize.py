@@ -597,6 +597,14 @@ def patch_profile_header():
         ("                    btnColor = Theme.multAlpha(Theme.adaptHSV(getThemedColor(Theme.key_actionBarDefault), +0.02f, +0.25f), .35f);\n",
          "                    btnColor = getThemedColor(Theme.key_profile_actionBackground);\n", 1),
     ])
+    # The open-from-chat animation ends on getProfileBackColorForId(), which would paint the header
+    # grey again once the animation finishes (only used by ProfileActivity).
+    edit("TMessagesProj/src/main/java/org/telegram/ui/Components/AvatarDrawable.java", [
+        ("    public static int getProfileBackColorForId(long id, Theme.ResourcesProvider resourcesProvider) {\n"
+         "        return Theme.getColor(Theme.key_windowBackgroundGray, resourcesProvider);\n",
+         "    public static int getProfileBackColorForId(long id, Theme.ResourcesProvider resourcesProvider) {\n"
+         "        return Theme.getColor(Theme.key_avatar_backgroundActionBarBlue, resourcesProvider);\n", 1),
+    ])
 
 
 GLASS_HEADER_PROVIDER = '''    // Chihuahua: the chat header pills (title, back, menu) take the action bar colour, so a theme
