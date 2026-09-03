@@ -10,7 +10,7 @@ Settings (environment):
 
 api_id / api_hash are passed to CMake by the workflow (TDESKTOP_API_ID / TDESKTOP_API_HASH), not here.
 Every edit is anchored on exact upstream text and the script aborts if an anchor is not found
-exactly the expected number of times.
+exactly the expected number of times. (Build trigger: run 2.)
 """
 import os
 import shutil
