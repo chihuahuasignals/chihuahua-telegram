@@ -66,8 +66,8 @@ def check_inputs():
         sys.exit("TG_API_HASH secret is missing or not a 32-char hex string — add it in GitHub → Settings → Secrets → Actions")
     if not KEYSTORE_PASSWORD:
         sys.exit("KEYSTORE_PASSWORD secret is missing — add it in GitHub → Settings → Secrets → Actions")
-    if BUILD_ABI not in ("arm64-v8a", "all"):
-        sys.exit("BUILD_ABI must be arm64-v8a or all")
+    if BUILD_ABI not in ("arm64-v8a", "armeabi-v7a", "x86_64", "x86", "all"):
+        sys.exit("BUILD_ABI must be arm64-v8a, armeabi-v7a, x86_64, x86 or all")
     if not ICONS.is_dir():
         sys.exit(f"icons folder missing at {ICONS}")
 

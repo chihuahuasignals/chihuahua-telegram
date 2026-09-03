@@ -1,0 +1,160 @@
+name: Smoke test in emulator
+
+# Builds an x86_64 copy of the app, starts it in an Android emulator and checks that it
+# stays alive. Results (status, screenshot, crash log) are pushed to the smoke-status branch.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - config.env
+      - customize.py
+      - icons/**
+      - smoke/**
+      - .github/workflows/smoke-test.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: smoke-test
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Build x86_64 and launch in emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+
+    steps:
+      - name: Check out this repository
+        uses: actions/checkout@v4
+
+      - name: Load config.env
+        run: |
+          set -euo pipefail
+          grep -E '^[A-Z_]+=' config.env >> "$GITHUB_ENV"
+          echo "BUILD_ABI=x86_64" >> "$GITHUB_ENV"
+          TOTAL_GB=$(free -g | awk '/Mem:/{print $2}')
+          if [ "$TOTAL_GB" -lt 12 ]; then echo "GRADLE_HEAP=5g" >> "$GITHUB_ENV"; fi
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/share/boost /opt/ghc /usr/local/.ghcup \
+                      /usr/share/swift /opt/hostedtoolcache/CodeQL /usr/local/lib/node_modules \
+                      /usr/local/share/powershell /usr/local/julia* 2>/dev/null || true
+          sudo docker image prune -af >/dev/null 2>&1 || true
+          df -h / | tail -1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK components
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1" "platform-tools" >/dev/null
+
+      - name: Get Telegram source (pinned commit, with submodules)
+        run: |
+          set -euo pipefail
+          git init -q telegram
+          cd telegram
+          git remote add origin https://github.com/DrKLO/Telegram.git
+          git fetch --depth 1 origin "$TELEGRAM_COMMIT"
+          git checkout -q --detach FETCH_HEAD
+          git submodule update --init --recursive --depth 1
+
+      - name: Apply Chihuahua customizations (x86_64)
+        env:
+          TG_API_ID: ${{ secrets.TG_API_ID }}
+          TG_API_HASH: ${{ secrets.TG_API_HASH }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: python3 customize.py telegram
+
+      - name: Install signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | tr -d ' \n\r' | base64 -d > telegram/TMessagesProj/config/release.keystore
+
+      - name: Build x86_64 APK
+        working-directory: telegram
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew :TMessagesProj_App:assembleAfatRelease --no-daemon --console=plain 2>&1 | tee ../build.log | grep -E --line-buffered '^> Task|BUILD|error|FAILED|What went wrong' || true
+          test -s ../build.log && grep -q "BUILD SUCCESSFUL" ../build.log
+
+      - name: Collect APK
+        run: |
+          set -euo pipefail
+          APK=$(find telegram/TMessagesProj_App/build/outputs/apk -name '*.apk' -type f | head -1)
+          mkdir -p out && cp "$APK" out/smoke-x86_64.apk && ls -la out
+
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Launch the app in an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          ram-size: 4096M
+          disk-size: 6G
+          emulator-boot-timeout: 900
+          disable-animations: true
+          script: bash smoke/run.sh
+
+      - name: Show result
+        if: always()
+        run: |
+          echo "### Emulator smoke test" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f smoke/result/STATUS ]; then
+            cat smoke/result/STATUS
+            sed 's/^/- /' smoke/result/STATUS >> "$GITHUB_STEP_SUMMARY"
+            grep -q '^result=alive' smoke/result/STATUS
+          else
+            echo "no STATUS produced (emulator or build step failed)"
+            echo "- no STATUS produced (emulator or build step failed)" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Upload smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-result
+          path: |
+            smoke/result/
+            build.log
+          if-no-files-found: ignore
+
+      - name: Record result (branch smoke-status)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          mkdir -p status && cd status
+          git init -q && git checkout -q -b smoke-status
+          cp -r ../smoke/result/. . 2>/dev/null
+          {
+            echo "job=${{ job.status }}"
+            echo "run=${{ github.run_number }}"
+            echo "run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "commit=${{ github.sha }}"
+          } > JOB
+          if [ -f ../build.log ]; then tail -n 200 ../build.log > build-log-tail.txt; fi
+          git add -A
+          git -c user.name=build-bot -c user.email=build-bot@users.noreply.github.com commit -q -m "smoke ${{ github.run_number }}: ${{ job.status }}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" smoke-status
