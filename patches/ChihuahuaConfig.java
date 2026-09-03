@@ -216,14 +216,31 @@ public class ChihuahuaConfig {
         return new java.text.SimpleDateFormat("MMM yyyy", java.util.Locale.US).format(new java.util.Date(millis));
     }
 
-    /** Suffix for the profile status line, e.g. " · est. Jun 2026"; empty when the switch is off. */
+    /**
+     * Compact age for the profile status line, e.g. " \u00b7 3mo old". Kept short because it shares
+     * one line with the last-seen text and the ID; the exact month is in the copy-ID toast.
+     */
     public static String accountAgeSuffix(long userId) {
         load();
         if (!accountAge) {
             return "";
         }
-        String created = estimatedCreation(userId);
-        return created.isEmpty() ? "" : " \u00b7 est. " + created;
+        long millis = estimatedCreationMillis(userId);
+        if (millis <= 0) {
+            return "";
+        }
+        long days = (System.currentTimeMillis() - millis) / 86400000L;
+        if (days < 0) {
+            days = 0;
+        }
+        int months = (int) (days / 30.44);
+        if (months < 1) {
+            return " \u00b7 new";
+        }
+        if (months < 24) {
+            return " \u00b7 " + months + "mo old";
+        }
+        return " \u00b7 " + (months / 12) + "y old";
     }
 
     public static boolean showAccountAge() {

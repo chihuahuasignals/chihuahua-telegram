@@ -532,7 +532,7 @@ def patch_add_to_group():
         (STATUS_ANCHOR,
          STATUS_ANCHOR +
          "                if (org.telegram.messenger.ChihuahuaConfig.showIdInProfile()) {\n"
-         "                    newString2 = newString2 + \" \u00b7 ID \" + user.id + org.telegram.messenger.ChihuahuaConfig.accountAgeSuffix(user.id);\n"
+         "                    newString2 = newString2 + org.telegram.messenger.ChihuahuaConfig.accountAgeSuffix(user.id) + \" \u00b7 ID \" + user.id;\n"
          "                }\n", 1),
     ])
 
