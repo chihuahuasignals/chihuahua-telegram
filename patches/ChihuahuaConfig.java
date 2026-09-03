@@ -26,6 +26,7 @@ public class ChihuahuaConfig {
     public static final String KEY_BACK_CAMERA = "back_camera";
     public static final String KEY_ACCOUNT_AGE = "account_age";
     public static final String KEY_FLAG_NEW = "flag_new_in_groups";
+    public static final String KEY_QUICK_BAN = "quick_ban";
     public static final String KEY_AGE_ALWAYS = "age_always_in_groups";
     /** Not a switch: months, stored separately (see flagMonths()). */
     public static final String KEY_FLAG_MONTHS = "flag_new_months";
@@ -44,6 +45,7 @@ public class ChihuahuaConfig {
     private static boolean backCamera = true;
     private static boolean accountAge = true;
     private static boolean flagNew = true;
+    private static boolean quickBan = true;
     private static boolean ageAlways = false;
     private static int flagMonths = 3;
 
@@ -69,6 +71,7 @@ public class ChihuahuaConfig {
             backCamera = p.getBoolean(KEY_BACK_CAMERA, true);
             accountAge = p.getBoolean(KEY_ACCOUNT_AGE, true);
             flagNew = p.getBoolean(KEY_FLAG_NEW, true);
+            quickBan = p.getBoolean(KEY_QUICK_BAN, true);
             ageAlways = p.getBoolean(KEY_AGE_ALWAYS, false);
             flagMonths = p.getInt(KEY_FLAG_MONTHS, 3);
             loaded = true;
@@ -160,6 +163,12 @@ public class ChihuahuaConfig {
         if (ApplicationLoader.applicationContext != null) {
             prefs().edit().putInt(KEY_FLAG_MONTHS, months).apply();
         }
+    }
+
+    /** Show the one-tap "Ban, wipe & report" item on group messages. */
+    public static boolean quickBan() {
+        load();
+        return quickBan;
     }
 
     public static boolean flagNewInGroups() {
@@ -362,6 +371,8 @@ public class ChihuahuaConfig {
                 return accountAge;
             case KEY_FLAG_NEW:
                 return flagNew;
+            case KEY_QUICK_BAN:
+                return quickBan;
             case KEY_AGE_ALWAYS:
                 return ageAlways;
             default:
@@ -398,6 +409,9 @@ public class ChihuahuaConfig {
                 break;
             case KEY_FLAG_NEW:
                 flagNew = value;
+                break;
+            case KEY_QUICK_BAN:
+                quickBan = value;
                 break;
             case KEY_AGE_ALWAYS:
                 ageAlways = value;

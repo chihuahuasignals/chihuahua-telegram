@@ -441,6 +441,109 @@ GROUP_BADGE = """            if (currentUser != null && !currentMessageObject.is
 """
 
 
+QUICK_BAN_METHODS = """    private static final int OPTION_CHIHUAHUA_NUKE = 900;
+
+    /** The user this message came from, when this build may ban them here; null otherwise. */
+    private TLRPC.User chihuahuaQuickBanTarget(MessageObject message) {
+        if (message == null || currentChat == null || currentEncryptedChat != null) {
+            return null;
+        }
+        if (!ChatObject.isMegagroup(currentChat) || !ChatObject.canBlockUsers(currentChat)) {
+            return null;
+        }
+        if (message.isOut() || message.getId() <= 0 || chatMode != MODE_DEFAULT) {
+            return null;
+        }
+        final long fromId = message.getSenderId();
+        if (fromId <= 0 || fromId == getUserConfig().getClientUserId()) {
+            return null;
+        }
+        final TLRPC.User user = getMessagesController().getUser(fromId);
+        if (user == null || UserObject.isDeleted(user)) {
+            return null;
+        }
+        return user;
+    }
+
+    /** Ban + delete every message + delete every reaction + report for spam, in one action. */
+    private void chihuahuaQuickBan(MessageObject message) {
+        final TLRPC.User user = chihuahuaQuickBanTarget(message);
+        final TLRPC.Chat chat = currentChat;
+        if (user == null || chat == null || getParentActivity() == null) {
+            return;
+        }
+        final ArrayList<Integer> reportIds = new ArrayList<>();
+        reportIds.add(message.getId());
+        final String name = UserObject.getUserName(user);
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), themeDelegate);
+        builder.setTitle("Ban, wipe and report");
+        builder.setMessage(AndroidUtilities.replaceTags("Ban **" + name + "** from this group, delete every message and reaction of theirs here, and report them to Telegram for spam?"));
+        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        builder.setPositiveButton("Ban and wipe", (di, i) -> {
+            TLRPC.TL_channels_reportSpam report = new TLRPC.TL_channels_reportSpam();
+            report.channel = MessagesController.getInputChannel(chat);
+            report.participant = MessagesController.getInputPeer(user);
+            report.id = reportIds;
+            getConnectionsManager().sendRequest(report, null);
+            getMessagesController().deleteUserChannelHistory(chat, user, null, 0);
+            getMessagesController().deleteUserChannelAllReactions(chat, user, null);
+            getMessagesController().deleteParticipantFromChat(chat.id, user, chat, false, false);
+            if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.ic_ban, name + " banned", "Messages and reactions deleted, reported for spam").show();
+            }
+        });
+        AlertDialog nukeDialog = builder.create();
+        showDialog(nukeDialog);
+        TextView nukeButton = (TextView) nukeDialog.getButton(DialogInterface.BUTTON_POSITIVE);
+        if (nukeButton != null) {
+            nukeButton.setTextColor(getThemedColor(Theme.key_text_RedBold));
+        }
+    }
+
+"""
+
+QUICK_BAN_MENU_ANCHOR = """        if (showWelcomeMessageRevertOption(primaryMessage)) {
+            items.add(getString(R.string.WelcomeMessageRevert));
+            options.add(OPTION_WELCOME_REVERT);
+            icons.add(R.drawable.outline_revert_24);
+        }
+    }
+"""
+
+QUICK_BAN_HANDLER_ANCHOR = """            case OPTION_DELETE: {
+                if (getParentActivity() == null) {
+"""
+
+
+def patch_quick_ban():
+    """One menu item on a group message that bans the sender, deletes all of their messages and
+    reactions in that group and reports them to Telegram for spam. Telegram can do all four, but
+    only as separate checkboxes in the delete sheet, ticked one at a time. Only appears where this
+    account is an admin with ban rights in a group."""
+    pa = "TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java"
+    menu_item = (
+        '        if (org.telegram.messenger.ChihuahuaConfig.quickBan() && chihuahuaQuickBanTarget(selectedObject) != null) {\n'
+        '            items.add("Ban, wipe & report");\n'
+        '            options.add(OPTION_CHIHUAHUA_NUKE);\n'
+        '            icons.add(R.drawable.msg_block2);\n'
+        '        }\n'
+    )
+    edit(pa, [
+        # the menu entry, appended after every other branch has run
+        (QUICK_BAN_MENU_ANCHOR,
+         QUICK_BAN_MENU_ANCHOR.rstrip("}\n") + "\n" + menu_item + "    }\n", 1),
+        # the two methods, right after the menu builder
+        ("    private boolean showWelcomeMessageRevertOption(MessageObject messageObject) {\n",
+         QUICK_BAN_METHODS + "    private boolean showWelcomeMessageRevertOption(MessageObject messageObject) {\n", 1),
+        # the action
+        (QUICK_BAN_HANDLER_ANCHOR,
+         "            case OPTION_CHIHUAHUA_NUKE: {\n"
+         "                chihuahuaQuickBan(selectedObject);\n"
+         "                break;\n"
+         "            }\n" + QUICK_BAN_HANDLER_ANCHOR, 1),
+    ])
+
+
 def patch_group_age_badge():
     """Groups show the estimated account age next to the sender's name, in the slot Telegram
     already uses for the "admin" label. Accounts under the threshold (Settings -> Chihuahua)
@@ -642,6 +745,7 @@ def patch_theme98():
     patch_per_account_notifications()
     patch_id_row()
     patch_group_age_badge()
+    patch_quick_ban()
 
 
 def patch_per_account_notifications():

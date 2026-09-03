@@ -35,6 +35,7 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
     private static final int ID_BACK_CAMERA = 7;
     private static final int ID_ACCOUNT_AGE = 8;
     private static final int ID_FLAG_NEW = 20;
+    private static final int ID_QUICK_BAN = 22;
     private static final int ID_AGE_ALWAYS = 21;
     /** Threshold rows use ID_MONTHS_BASE + months. */
     private static final int ID_MONTHS_BASE = 200;
@@ -75,6 +76,10 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
         items.add(UItem.asCheck(ID_SHOW_ID, "Show user ID under the name").setChecked(ChihuahuaConfig.showIdInProfile()));
         items.add(UItem.asCheck(ID_ACCOUNT_AGE, "Show estimated account age").setChecked(ChihuahuaConfig.showAccountAge()));
         items.add(UItem.asShadow("The ID has its own row in the profile; tap it to copy. Telegram hands out IDs in order, so the ID dates an account to within a month or two (\"est. Nov 2025\") — a brand-new account is a common spam sign. Every profile's ⋮ menu also has Copy ID, Add to Group and Ban from all my groups."));
+
+        items.add(UItem.asHeader("Moderation"));
+        items.add(UItem.asCheck(ID_QUICK_BAN, "\"Ban, wipe & report\" on group messages").setChecked(ChihuahuaConfig.quickBan()));
+        items.add(UItem.asShadow("Long-press any message in a group you admin: one item bans the sender, deletes every message and reaction of theirs in that group, and reports them to Telegram for spam. Asks once before it does it. Only shown where you have ban rights."));
 
         items.add(UItem.asHeader("New accounts in groups"));
         items.add(UItem.asCheck(ID_FLAG_NEW, "Flag new accounts on their messages").setChecked(ChihuahuaConfig.flagNewInGroups()));
@@ -177,6 +182,8 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
                 key = ChihuahuaConfig.KEY_BACK_CAMERA;
             } else if (item.id == ID_ACCOUNT_AGE) {
                 key = ChihuahuaConfig.KEY_ACCOUNT_AGE;
+            } else if (item.id == ID_QUICK_BAN) {
+                key = ChihuahuaConfig.KEY_QUICK_BAN;
             } else if (item.id == ID_FLAG_NEW) {
                 key = ChihuahuaConfig.KEY_FLAG_NEW;
             } else if (item.id == ID_AGE_ALWAYS) {
