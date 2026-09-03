@@ -7,9 +7,9 @@ Your own build of Telegram for Android with the account limit raised (32 account
 - Long-press a message in a group you moderate for three one-item actions, instead of Telegram's
   separate checkboxes. All three delete every message *and* reaction of the sender and report them
   to Telegram for spam; they differ in what else they do:
-  **Ban, wipe & report** (bans them, this group only) ·
+  **Ban everywhere, wipe & report** (removes them from every group you manage, cannot rejoin) ·
   **Mute everywhere, wipe & report** (silences them — no posting, media, reactions, invites or pins —
-  in *every* group you manage, without removing them) ·
+  in every group you manage, without removing them) ·
   **Wipe everywhere & report** (clean-up only, across every group you manage: no ban, no mute).
 - In group chats the sender's estimated account age next to their name (red when newer than your threshold), so throwaway spam accounts stand out without opening profiles.
 - A **Chihuahua 98** colour theme (Windows 98 palette: navy title bars, grey chrome, teal chat background), applied once on first start and listed under Settings → Chat Settings; the chat list is titled "Chihuahua".

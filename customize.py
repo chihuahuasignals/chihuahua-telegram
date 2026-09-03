@@ -441,11 +441,15 @@ GROUP_BADGE = """            if (currentUser != null && !currentMessageObject.is
 """
 
 
-QUICK_BAN_METHODS = """    private static final int OPTION_CHIHUAHUA_NUKE = 900;
+QUICK_BAN_METHODS = """    private static final int CHIHUAHUA_WIPE_ONLY = 0;
+    private static final int CHIHUAHUA_WIPE_MUTE = 1;
+    private static final int CHIHUAHUA_WIPE_BAN = 2;
+
+    private static final int OPTION_CHIHUAHUA_NUKE = 900;
     private static final int OPTION_CHIHUAHUA_MUTE = 901;
     private static final int OPTION_CHIHUAHUA_WIPE = 902;
 
-    /** The user this message came from, when this build may ban them here; null otherwise. */
+    /** The user this message came from, when this build may moderate them here; null otherwise. */
     private TLRPC.User chihuahuaQuickBanTarget(MessageObject message) {
         if (message == null || currentChat == null || currentEncryptedChat != null) {
             return null;
@@ -467,42 +471,7 @@ QUICK_BAN_METHODS = """    private static final int OPTION_CHIHUAHUA_NUKE = 900;
         return user;
     }
 
-    /** Ban + delete every message + delete every reaction + report for spam, in one action. */
-    private void chihuahuaQuickBan(MessageObject message) {
-        final TLRPC.User user = chihuahuaQuickBanTarget(message);
-        final TLRPC.Chat chat = currentChat;
-        if (user == null || chat == null || getParentActivity() == null) {
-            return;
-        }
-        final ArrayList<Integer> reportIds = new ArrayList<>();
-        reportIds.add(message.getId());
-        final String name = UserObject.getUserName(user);
-        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), themeDelegate);
-        builder.setTitle("Ban, wipe and report");
-        builder.setMessage(AndroidUtilities.replaceTags("Ban **" + name + "** from this group, delete every message and reaction of theirs here, and report them to Telegram for spam?"));
-        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-        builder.setPositiveButton("Ban and wipe", (di, i) -> {
-            TLRPC.TL_channels_reportSpam report = new TLRPC.TL_channels_reportSpam();
-            report.channel = MessagesController.getInputChannel(chat);
-            report.participant = MessagesController.getInputPeer(user);
-            report.id = reportIds;
-            getConnectionsManager().sendRequest(report, null);
-            getMessagesController().deleteUserChannelHistory(chat, user, null, 0);
-            getMessagesController().deleteUserChannelAllReactions(chat, user, null);
-            getMessagesController().deleteParticipantFromChat(chat.id, user, chat, false, false);
-            if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
-                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.ic_ban, name + " banned", "Messages and reactions deleted, reported for spam").show();
-            }
-        });
-        AlertDialog nukeDialog = builder.create();
-        showDialog(nukeDialog);
-        TextView nukeButton = (TextView) nukeDialog.getButton(DialogInterface.BUTTON_POSITIVE);
-        if (nukeButton != null) {
-            nukeButton.setTextColor(getThemedColor(Theme.key_text_RedBold));
-        }
-    }
-
-    /** Groups where this account is an admin who can restrict members. */
+    /** Groups where this account is an admin who can remove or restrict members. */
     private ArrayList<TLRPC.Chat> chihuahuaManagedGroups() {
         final ArrayList<TLRPC.Chat> chats = new ArrayList<>();
         for (TLRPC.Dialog dialog : getMessagesController().getAllDialogs()) {
@@ -546,11 +515,11 @@ QUICK_BAN_METHODS = """    private static final int OPTION_CHIHUAHUA_NUKE = 900;
     }
 
     /**
-     * Wipe a sender out of every group this account manages: their messages and reactions are
-     * deleted in all of them and they are reported for spam, and when {@code mute} is set they are
-     * also silenced there. Nobody is removed from a group -- that is what the ban item is for.
+     * Clears a sender out of every group this account manages: their messages and reactions are
+     * deleted in all of them and they are reported to Telegram for spam. {@code mode} decides what
+     * else happens to them -- nothing, muted in those groups, or banned from them.
      */
-    private void chihuahuaWipeEverywhere(MessageObject message, boolean mute) {
+    private void chihuahuaWipeEverywhere(MessageObject message, int mode) {
         final TLRPC.User user = chihuahuaQuickBanTarget(message);
         final TLRPC.Chat chat = currentChat;
         if (user == null || chat == null || getParentActivity() == null) {
@@ -563,30 +532,45 @@ QUICK_BAN_METHODS = """    private static final int OPTION_CHIHUAHUA_NUKE = 900;
         final ArrayList<Integer> reportIds = new ArrayList<>();
         reportIds.add(message.getId());
         final String name = UserObject.getUserName(user);
-        final String groupsWord = chats.size() == 1 ? " group" : " groups";
+        final String where = chats.size() + (chats.size() == 1 ? " group" : " groups") + " you manage";
+        final String title, question, confirm, done;
+        if (mode == CHIHUAHUA_WIPE_BAN) {
+            title = "Ban everywhere and wipe";
+            question = "Ban **" + name + "** from " + where + ", delete every message and reaction of theirs in them, and report them to Telegram for spam? They are removed and cannot rejoin.";
+            confirm = "Ban and wipe";
+            done = name + " banned from " + where;
+        } else if (mode == CHIHUAHUA_WIPE_MUTE) {
+            title = "Mute everywhere and wipe";
+            question = "Mute **" + name + "** in " + where + ", delete every message and reaction of theirs in them, and report them to Telegram for spam? They stay in the groups but cannot post or react.";
+            confirm = "Mute and wipe";
+            done = name + " muted in " + where;
+        } else {
+            title = "Wipe everywhere";
+            question = "Delete every message and reaction of **" + name + "** in " + where + " and report them to Telegram for spam? They are not muted or removed, so they can post again.";
+            confirm = "Wipe";
+            done = name + " wiped from " + where;
+        }
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), themeDelegate);
-        builder.setTitle(mute ? "Mute everywhere and wipe" : "Wipe everywhere");
-        builder.setMessage(AndroidUtilities.replaceTags(mute
-                ? "Mute **" + name + "** in " + chats.size() + groupsWord + " you manage, delete every message and reaction of theirs in them, and report them to Telegram for spam? They stay in the groups but cannot post or react."
-                : "Delete every message and reaction of **" + name + "** in " + chats.size() + groupsWord + " you manage and report them to Telegram for spam? They are not muted or removed, so they can post again."));
+        builder.setTitle(title);
+        builder.setMessage(AndroidUtilities.replaceTags(question));
         builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-        builder.setPositiveButton(mute ? "Mute and wipe" : "Wipe", (di, i) -> {
+        builder.setPositiveButton(confirm, (di, i) -> {
             TLRPC.TL_channels_reportSpam report = new TLRPC.TL_channels_reportSpam();
             report.channel = MessagesController.getInputChannel(chat);
             report.participant = MessagesController.getInputPeer(user);
             report.id = reportIds;
             getConnectionsManager().sendRequest(report, null);
             for (TLRPC.Chat group : chats) {
-                if (mute) {
-                    getMessagesController().setParticipantBannedRole(group.id, user, null, chihuahuaMuteRights(), false, ChatActivity.this);
-                }
                 getMessagesController().deleteUserChannelHistory(group, user, null, 0);
                 getMessagesController().deleteUserChannelAllReactions(group, user, null);
+                if (mode == CHIHUAHUA_WIPE_MUTE) {
+                    getMessagesController().setParticipantBannedRole(group.id, user, null, chihuahuaMuteRights(), false, ChatActivity.this);
+                } else if (mode == CHIHUAHUA_WIPE_BAN) {
+                    getMessagesController().deleteParticipantFromChat(group.id, user, group, false, false);
+                }
             }
             if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
-                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.ic_ban,
-                        mute ? name + " muted in " + chats.size() + groupsWord : name + " wiped from " + chats.size() + groupsWord,
-                        "Messages and reactions deleted, reported for spam").show();
+                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.ic_ban, done, "Messages and reactions deleted, reported for spam").show();
             }
         });
         AlertDialog wipeDialog = builder.create();
@@ -664,7 +648,7 @@ def patch_quick_ban():
     pa = "TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java"
     menu_item = (
         '        if (org.telegram.messenger.ChihuahuaConfig.quickBan() && chihuahuaQuickBanTarget(selectedObject) != null) {\n'
-        '            items.add("Ban, wipe & report");\n'
+        '            items.add("Ban everywhere, wipe & report");\n'
         '            options.add(OPTION_CHIHUAHUA_NUKE);\n'
         '            icons.add(R.drawable.msg_block2);\n'
         '            items.add("Mute everywhere, wipe & report");\n'
@@ -685,15 +669,15 @@ def patch_quick_ban():
         # the action
         (QUICK_BAN_HANDLER_ANCHOR,
          "            case OPTION_CHIHUAHUA_NUKE: {\n"
-         "                chihuahuaQuickBan(selectedObject);\n"
+         "                chihuahuaWipeEverywhere(selectedObject, CHIHUAHUA_WIPE_BAN);\n"
          "                break;\n"
          "            }\n"
          "            case OPTION_CHIHUAHUA_MUTE: {\n"
-         "                chihuahuaWipeEverywhere(selectedObject, true);\n"
+         "                chihuahuaWipeEverywhere(selectedObject, CHIHUAHUA_WIPE_MUTE);\n"
          "                break;\n"
          "            }\n"
          "            case OPTION_CHIHUAHUA_WIPE: {\n"
-         "                chihuahuaWipeEverywhere(selectedObject, false);\n"
+         "                chihuahuaWipeEverywhere(selectedObject, CHIHUAHUA_WIPE_ONLY);\n"
          "                break;\n"
          "            }\n" + QUICK_BAN_HANDLER_ANCHOR, 1),
     ])
