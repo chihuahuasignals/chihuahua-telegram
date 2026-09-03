@@ -315,6 +315,7 @@ CHAT_MENU_ANCHOR = (
     "            hasVoiceChatItem = false;\n"
 )
 STATUS_ANCHOR = "                newString2 = LocaleController.formatUserStatus(currentAccount, user, isOnline, shortStatus ? new boolean[1] : null);\n"
+STATUS_SET_ANCHOR = "                } else {\n                    onlineTextView[a].setText(newString2);\n                }\n"
 
 COPY_ID_HANDLER = (
     "                } else if (id == chihuahua_copy_id) {\n"
@@ -507,6 +508,21 @@ def patch_add_to_group():
         # "Copy ID" in a group/channel profile menu
         (CHAT_MENU_ANCHOR,
          CHAT_MENU_ANCHOR + "            otherItem.addSubItem(chihuahua_copy_id, R.drawable.msg_copy, \"Copy ID\");\n", 1),
+        # tapping the status line copies the ID
+        (STATUS_SET_ANCHOR,
+         STATUS_SET_ANCHOR +
+         "                if (a == 1 && org.telegram.messenger.ChihuahuaConfig.showIdInProfile()) {\n"
+         "                    final long chihuahuaUserId = user.id;\n"
+         "                    onlineTextView[a].setOnClickListener(v -> {\n"
+         "                        AndroidUtilities.addToClipboard(String.valueOf(chihuahuaUserId));\n"
+         "                        if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {\n"
+         "                            BulletinFactory.of(ProfileActivity.this).createCopyBulletin(\"ID \" + chihuahuaUserId + \" copied\").show();\n"
+         "                        }\n"
+         "                    });\n"
+         "                } else if (a == 1) {\n"
+         "                    onlineTextView[a].setOnClickListener(null);\n"
+         "                    onlineTextView[a].setClickable(false);\n"
+         "                }\n", 1),
         # user ID next to the online status under the name (toggle in Settings → Chihuahua)
         (STATUS_ANCHOR,
          STATUS_ANCHOR +
