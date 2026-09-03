@@ -91,6 +91,11 @@ a Release app cannot link against the Debug-only libraries Telegram's own CI bui
 compile the first time and are then cached; a run that compiled them stops there and automatically starts
 a second run, which produces the app from the cached libraries in ~1-2 hours.
 Releases are tagged `desktop-v…`; unzip and run the .exe (portable, data in `%APPDATA%\Chihuahua Telegram`).
+The desktop build has the name, icon and 32-account limit; the Android-only extras (age badges,
+the moderation items, Settings → Chihuahua) are Java patches and have not been ported to the C++
+side yet. `desktop/theme/ChihuahuaTelegram98.tdesktop-theme` is the Windows 98 palette for desktop —
+in the app: Settings → Chat Settings → Choose theme → **Load from file**. Regenerate it with
+`desktop/theme/make_desktop_theme.py <tdesktop>/Telegram/Resources/day-blue.tdesktop-theme`.
 Keep the repository public while Windows builds are running: Windows minutes count double against the
 2,000 free minutes of a private repository, and private repositories get slower runners.
 
