@@ -61,9 +61,18 @@ You can also press **Actions → Build Android APK → Run workflow** to rebuild
 - Telegram's anti-spam runs on their servers. Many accounts on one phone doing marketing-like
   things get restricted no matter which app is used.
 
+## Windows desktop
+
+`.github/workflows/build-windows.yml` builds Telegram Desktop 7.1.5 (x64) with the same name, icon and
+32-account limit, from `desktop/customize_desktop.py`. The third-party libraries take ~2-3 hours to
+compile the first time and are then cached; a run that compiled them stops there — run it once more
+(Actions → Build Windows desktop → Run workflow) and the second run produces the app in ~1-2 hours.
+Releases are tagged `desktop-v…`; unzip and run the .exe (portable, data in `%APPDATA%\Chihuahua Telegram`).
+
 ## Files
 
 - `.github/workflows/build-android.yml` — the build recipe GitHub runs.
 - `customize.py` — the changes applied to Telegram's source (account limit, name, package, icon, API keys).
+- `desktop/customize_desktop.py` — the same idea for Telegram Desktop; `icons/desktop/` its icons.
 - `config.env` — the settings above.
 - `icons/` — launcher icons.

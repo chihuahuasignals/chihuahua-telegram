@@ -1,0 +1,250 @@
+name: Build Windows desktop
+
+# Builds Telegram Desktop (x64, Qt 6, Release) from the pinned tdesktop tag with the Chihuahua
+# customizations. Mirrors tdesktop's own .github/workflows/win.yml. The third-party libraries
+# take ~2-3 hours to compile the first time and are cached; to stay clear of GitHub's 6-hour job
+# limit, a run that had to build the libraries from scratch stops there — run it once more and the
+# second run (libraries from cache) builds the app in ~1-2 hours.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: "Build the app even when the libraries were not cached (risks the 6-hour limit)"
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - desktop/**
+      - icons/desktop/**
+      - .github/workflows/build-windows.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-windows
+  cancel-in-progress: false
+
+env:
+  TDESKTOP_TAG: v7.1.5
+  REPO_NAME: tdesktop
+  PREPARE_PATH: "Telegram/build/prepare/prepare.py"
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 355
+
+    defaults:
+      run:
+        shell: cmd
+
+    steps:
+      - name: Check out this repository
+        uses: actions/checkout@v4
+
+      - name: Prepare directories.
+        run: |
+          mkdir %userprofile%\TBuild\Libraries
+          mklink /d %GITHUB_WORKSPACE%\TBuild %userprofile%\TBuild
+          echo TBUILD=%GITHUB_WORKSPACE%\TBuild>>%GITHUB_ENV%
+          echo LibrariesPath=%GITHUB_WORKSPACE%\TBuild\Libraries\win64>>%GITHUB_ENV%
+
+      - name: Load config.env
+        shell: bash
+        run: |
+          grep -E '^(APP_NAME|MAX_ACCOUNTS)=' config.env >> "$GITHUB_ENV"
+          grep -E '^(APP_NAME|MAX_ACCOUNTS)=' config.env
+
+      - name: Clone Telegram Desktop ${{ env.TDESKTOP_TAG }}.
+        uses: actions/checkout@v4
+        with:
+          repository: telegramdesktop/tdesktop
+          ref: ${{ env.TDESKTOP_TAG }}
+          submodules: recursive
+          path: ${{ env.TBUILD }}\${{ env.REPO_NAME }}
+
+      - name: First set up.
+        shell: bash
+        run: |
+          DOCPATH=$TBUILD/$REPO_NAME/docs/building-win.md
+          SDK="$(grep "SDK version" $DOCPATH | sed -r 's/.*\*\*(.*)\*\* SDK version.*/\1/')"
+          echo "SDK=$SDK" >> $GITHUB_ENV
+          echo "Windows SDK from docs: $SDK"
+
+          sed -i '/CMAKE_${lang}_FLAGS_DEBUG_INIT/s/${_Zi}//' "$PROGRAMFILES"/CMake/share/cmake*/Modules/Platform/Windows-MSVC.cmake
+
+          echo "$(sha256sum $TBUILD/$REPO_NAME/$PREPARE_PATH | awk '{ print $1 }')" >> CACHE_KEY.txt
+          echo "$SDK" >> CACHE_KEY.txt
+          echo "CACHE_KEY=$(sha256sum CACHE_KEY.txt | awk '{ print $1 }')" >> $GITHUB_ENV
+
+          git config --global user.email "you@example.com"
+          git config --global user.name "Sample"
+
+      - uses: Eden-CI/msvc-dev-cmd@master
+        name: Native Tools Command Prompt.
+        with:
+          arch: x64
+          sdk: ${{ env.SDK }}
+          toolset: '14.44'
+
+      - name: NuGet sources.
+        run: |
+          nuget sources Disable -Name "Microsoft Visual Studio Offline Packages"
+          nuget sources Add -Source https://api.nuget.org/v3/index.json & exit 0
+
+      - name: ThirdParty cache.
+        id: cache-third-party
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TBUILD }}\ThirdParty
+          key: ${{ runner.OS }}-${{ runner.arch }}-third-party-${{ env.CACHE_KEY }}
+          restore-keys: ${{ runner.OS }}-${{ runner.arch }}-third-party-
+
+      - name: Libraries cache.
+        id: cache-libs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.LibrariesPath }}\*
+            !${{ env.LibrariesPath }}\cache_keys
+            !${{ env.LibrariesPath }}\[qQ]t[_-]*
+            ${{ env.LibrariesPath }}\cache_keys\*
+            !${{ env.LibrariesPath }}\cache_keys\[qQ]t[_-]*
+          key: ${{ runner.OS }}-x64-libs-v2-${{ env.CACHE_KEY }}
+          restore-keys: ${{ runner.OS }}-x64-libs-v2-
+
+      - name: Qt cache.
+        id: cache-qt
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.LibrariesPath }}\[qQ]t[_-]*
+            ${{ env.LibrariesPath }}\cache_keys\[qQ]t[_-]*
+          key: ${{ runner.OS }}-x64-qt6-${{ env.CACHE_KEY }}
+          restore-keys: ${{ runner.OS }}-x64-qt6-
+
+      - name: Libraries (compiles third-party code; hours on a cold cache).
+        run: |
+          %TBUILD%\%REPO_NAME%\Telegram\build\prepare\win.bat skip-release silent qt6
+
+      - name: Decide whether to build the app in this run.
+        shell: bash
+        run: |
+          LIBS="${{ steps.cache-libs.outputs.cache-hit }}"
+          QT="${{ steps.cache-qt.outputs.cache-hit }}"
+          FORCE="${{ github.event.inputs.force_build }}"
+          if [ "$LIBS" = "true" ] && [ "$QT" = "true" ]; then
+            echo "BUILD_NOW=true" >> $GITHUB_ENV
+            echo "Libraries came from cache — building the app now."
+          elif [ "$FORCE" = "true" ]; then
+            echo "BUILD_NOW=true" >> $GITHUB_ENV
+            echo "Libraries were compiled in this run; force_build is set — building anyway."
+          else
+            echo "BUILD_NOW=false" >> $GITHUB_ENV
+            echo "::warning::Libraries were compiled in this run and are being cached. Run this workflow once more to build the app."
+            echo "### Libraries prepared and cached — run the workflow again to build the app." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Free up some disk space.
+        shell: bash
+        run: find $LibrariesPath '(' '(' ! '(' -name '*.lib' -o -name '*.a' -o -name '*.exe' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -name '*.pc' -o -path '*/include/*' -o -path '*/objects-*' -o -path '*/cache_keys/*' -o -path '*/patches/*' -o -path '*/nv-codec-headers/*' ')' -type f ')' -o -empty ')' -delete
+
+      - name: Apply Chihuahua customizations.
+        if: env.BUILD_NOW == 'true'
+        shell: bash
+        run: python desktop/customize_desktop.py "$TBUILD/$REPO_NAME"
+
+      - name: Telegram Desktop build (Release).
+        if: env.BUILD_NOW == 'true'
+        env:
+          TG_API_ID: ${{ secrets.TG_API_ID }}
+          TG_API_HASH: ${{ secrets.TG_API_HASH }}
+        run: |
+          cd %TBUILD%\%REPO_NAME%\Telegram
+
+          call configure.bat ^
+          x64 ^
+          qt6 ^
+          -D TDESKTOP_API_ID=%TG_API_ID% ^
+          -D TDESKTOP_API_HASH=%TG_API_HASH% ^
+          -D CMAKE_CONFIGURATION_TYPES=Release ^
+          -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT= ^
+          -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON ^
+          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON
+
+          cmake --build ..\out --config Release --parallel
+
+      - name: Package.
+        if: env.BUILD_NOW == 'true'
+        id: pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$TBUILD/$REPO_NAME/out/Release"
+          ls -la "$OUT" | head -20
+          SAFE_NAME=$(echo "$APP_NAME" | tr -cd '[:alnum:]')
+          VERSION="${TDESKTOP_TAG#v}"
+          mkdir -p artifact
+          cp "$OUT/Telegram.exe" "artifact/${SAFE_NAME}.exe"
+          cat > artifact/README.txt <<EOF
+          $APP_NAME for Windows (64-bit), based on Telegram Desktop $VERSION.
+          Portable: put ${SAFE_NAME}.exe in any folder and run it. Data is kept in %APPDATA%\\$APP_NAME.
+          Windows SmartScreen may warn because the file is not signed: More info -> Run anyway.
+          EOF
+          ZIP="${SAFE_NAME}-${VERSION}-win64.zip"
+          (cd artifact && powershell -NoProfile -Command "Compress-Archive -Path '${SAFE_NAME}.exe','README.txt' -DestinationPath '../$ZIP' -Force")
+          sha256sum "$ZIP" | tee SHA256SUMS-desktop.txt
+          echo "zip=$ZIP" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "### Windows build" >> $GITHUB_STEP_SUMMARY
+          echo "- File: **$ZIP** ($(du -h "$ZIP" | cut -f1))" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload artifact.
+        if: env.BUILD_NOW == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pack.outputs.zip }}
+          path: |
+            ${{ steps.pack.outputs.zip }}
+            SHA256SUMS-desktop.txt
+          retention-days: 30
+
+      - name: Publish GitHub release.
+        if: env.BUILD_NOW == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="desktop-v${{ steps.pack.outputs.version }}-build${{ github.run_number }}"
+          gh release create "$TAG" "${{ steps.pack.outputs.zip }}" SHA256SUMS-desktop.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$APP_NAME for Windows ${{ steps.pack.outputs.version }} (build ${{ github.run_number }})" \
+            --notes "Telegram Desktop ${{ steps.pack.outputs.version }} source. Max accounts: ${MAX_ACCOUNTS}. Unzip and run the .exe (portable). SmartScreen: More info -> Run anyway."
+          echo "- Release: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" >> $GITHUB_STEP_SUMMARY
+
+      - name: Record status (branch desktop-status).
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          mkdir -p status && cd status
+          git init -q && git checkout -q -b desktop-status
+          {
+            echo "result=${{ job.status }}"
+            echo "built=${BUILD_NOW:-unknown}"
+            echo "run=${{ github.run_number }}"
+            echo "run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "commit=${{ github.sha }}"
+            echo "zip=${{ steps.pack.outputs.zip }}"
+            echo "finished=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > STATUS
+          git add -A
+          git -c user.name=build-bot -c user.email=build-bot@users.noreply.github.com commit -q -m "desktop ${{ github.run_number }}: ${{ job.status }}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" desktop-status
