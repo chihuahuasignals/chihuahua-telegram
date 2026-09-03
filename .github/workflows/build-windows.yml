@@ -54,12 +54,34 @@ jobs:
       - name: Check out this repository
         uses: actions/checkout@v4
 
+      # Build on D: when the runner has one. C: only has ~30 GB free and Qt built in both Debug
+      # and Release needs more than that (run 5 died with "No space left on device" at 28/31);
+      # D: is the runner's temp disk with ~147 GB free. The symlink keeps every path below
+      # (and the cache entries) identical either way.
       - name: Prepare directories.
         run: |
-          mkdir %userprofile%\TBuild\Libraries
-          mklink /d %GITHUB_WORKSPACE%\TBuild %userprofile%\TBuild
+          set "TBROOT=%userprofile%\TBuild"
+          if exist D:\ set "TBROOT=D:\TBuild"
+          echo Building in %TBROOT%
+          mkdir "%TBROOT%\Libraries"
+          mklink /d "%GITHUB_WORKSPACE%\TBuild" "%TBROOT%"
           echo TBUILD=%GITHUB_WORKSPACE%\TBuild>>%GITHUB_ENV%
           echo LibrariesPath=%GITHUB_WORKSPACE%\TBuild\Libraries\win64>>%GITHUB_ENV%
+
+      - name: "Free space on C: before building."
+        shell: pwsh
+        run: |
+          foreach ($p in @("$env:ANDROID_SDK_ROOT", "$env:JAVA_HOME_11_X64", "$env:JAVA_HOME_21_X64",
+                           "C:\Program Files\dotnet\sdk", "C:\Program Files (x86)\Android",
+                           "C:\Program Files\Google\Chrome\Application\SetupMetrics",
+                           "C:\hostedtoolcache\windows\Ruby", "C:\hostedtoolcache\windows\go",
+                           "C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk")) {
+            if ($p -and (Test-Path $p)) {
+              Remove-Item -Recurse -Force $p -ErrorAction SilentlyContinue
+              Write-Host "removed $p"
+            }
+          }
+          Get-PSDrive -PSProvider FileSystem | Select-Object Name, Used, Free | Format-Table
 
       - name: Load config.env
         shell: bash
@@ -162,6 +184,20 @@ jobs:
         if: always()
         shell: bash
         run: df -h | tee disk-after.txt
+
+      # Qt and tg_owt leave tens of GB of object files behind; the app build does not need them.
+      - name: Drop library build intermediates.
+        if: always()
+        shell: pwsh
+        run: |
+          $roots = @("$env:LibrariesPath\qt_6.11.1", "$env:LibrariesPath\tg_owt\out")
+          foreach ($r in $roots) {
+            if (Test-Path $r) {
+              Get-ChildItem -Path $r -Recurse -File -Include *.obj,*.ilk,*.tmp -ErrorAction SilentlyContinue |
+                Remove-Item -Force -ErrorAction SilentlyContinue
+            }
+          }
+          Get-PSDrive -PSProvider FileSystem | Select-Object Name, Used, Free | Format-Table
 
       - name: Decide whether to build the app in this run.
         shell: bash
