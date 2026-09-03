@@ -3,6 +3,7 @@
 Your own build of Telegram for Android with the account limit raised (32 accounts instead of 3) plus:
 
 - **Add to Group**, **Copy ID** and **Ban from all my groups** in every user's profile menu (⋮); **Copy ID** in group/channel menus too.
+- **Admins** in a group or channel's ⋮ menu — the full admin list in one tap, in any group you are in, not just ones you manage (Telegram only offers this through Manage Group, which needs admin rights).
 - The estimated month the account was created shown next to their online status in profiles (worked out from the ID), and the user's ID on its own row below — tap it to copy. Both switchable.
 - Long-press a message in a group you moderate for three one-item actions, instead of Telegram's
   separate checkboxes. All three delete every message *and* reaction of the sender and report them

@@ -377,6 +377,17 @@ BAN_EVERYWHERE_HANDLER = (
 )
 
 
+ADMINS_HANDLER = (
+    "                } else if (id == chihuahua_admins) {\n"
+    "                    Bundle adminArgs = new Bundle();\n"
+    "                    adminArgs.putLong(\"chat_id\", chatId);\n"
+    "                    adminArgs.putInt(\"type\", ChatUsersActivity.TYPE_ADMIN);\n"
+    "                    ChatUsersActivity adminFragment = new ChatUsersActivity(adminArgs);\n"
+    "                    adminFragment.setInfo(chatInfo);\n"
+    "                    presentFragment(adminFragment);\n"
+)
+
+
 ACTIVATION_GATE = (
     "    private android.app.AlertDialog chihuahuaActivationDialog;\n"
     "\n"
@@ -814,12 +825,13 @@ def patch_add_to_group():
          "    private final static int invite_to_group = 9;\n"
          "    private final static int chihuahua_add_to_group = 90;\n"
          "    private final static int chihuahua_copy_id = 91;\n"
-         "    private final static int chihuahua_ban_everywhere = 92;\n", 1),
+         "    private final static int chihuahua_ban_everywhere = 92;\n"
+         "    private final static int chihuahua_admins = 93;\n", 1),
         (menu_anchor,
          menu_anchor +
          "                    otherItem.addSubItem(chihuahua_add_to_group, R.drawable.msg_addbot, LocaleController.getString(R.string.AddToGroup));\n", 1),
         ("                } else if (id == invite_to_group) {\n",
-         ADD_TO_GROUP_HANDLER + COPY_ID_HANDLER + BAN_EVERYWHERE_HANDLER + "                } else if (id == invite_to_group) {\n", 1),
+         ADD_TO_GROUP_HANDLER + COPY_ID_HANDLER + BAN_EVERYWHERE_HANDLER + ADMINS_HANDLER + "                } else if (id == invite_to_group) {\n", 1),
         # "Copy ID" + "Ban from all my groups" in a person's profile menu (placed before the contact's Add-to-Home-screen entry)
         (CONTACT_SHORTCUT_ANCHOR,
          "                otherItem.addSubItem(chihuahua_copy_id, R.drawable.msg_copy, \"Copy ID\");\n"
@@ -828,7 +840,10 @@ def patch_add_to_group():
          "                }\n" + CONTACT_SHORTCUT_ANCHOR, 1),
         # "Copy ID" in a group/channel profile menu
         (CHAT_MENU_ANCHOR,
-         CHAT_MENU_ANCHOR + "            otherItem.addSubItem(chihuahua_copy_id, R.drawable.msg_copy, \"Copy ID\");\n", 1),
+         CHAT_MENU_ANCHOR + "            otherItem.addSubItem(chihuahua_copy_id, R.drawable.msg_copy, \"Copy ID\");\n"
+         "            if (chat != null && ChatObject.isChannel(chat)) {\n"
+         "                otherItem.addSubItem(chihuahua_admins, R.drawable.msg_admins, \"Admins\");\n"
+         "            }\n", 1),
         # user ID next to the online status under the name (toggle in Settings → Chihuahua)
         (STATUS_ANCHOR,
          STATUS_ANCHOR +
