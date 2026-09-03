@@ -26,6 +26,9 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
     private static final int ID_SHOW_ID = 1;
     private static final int ID_HIDE_STORIES = 2;
     private static final int ID_HIDE_PREMIUM = 3;
+    private static final int ID_GHOST_READ = 4;
+    private static final int ID_GHOST_TYPING = 5;
+    private static final int ID_GHOST_OFFLINE = 6;
     private static final int ID_VERSION = 10;
     private static final int ID_ACCOUNTS = 11;
     private static final int ID_SOURCE = 12;
@@ -64,6 +67,12 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
         items.add(UItem.asCheck(ID_HIDE_STORIES, "Hide the Stories bar").setChecked(ChihuahuaConfig.hideStories()));
         items.add(UItem.asShadow("Removes the row of story avatars above the chat list. Stories stay reachable from profiles."));
 
+        items.add(UItem.asHeader("Ghost mode"));
+        items.add(UItem.asCheck(ID_GHOST_READ, "Don't send read receipts").setChecked(ChihuahuaConfig.ghostRead()));
+        items.add(UItem.asCheck(ID_GHOST_TYPING, "Don't show that I'm typing").setChecked(ChihuahuaConfig.ghostTyping()));
+        items.add(UItem.asCheck(ID_GHOST_OFFLINE, "Stay offline").setChecked(ChihuahuaConfig.ghostOffline()));
+        items.add(UItem.asShadow("Read receipts: senders never see blue ticks, voice messages never show as played, stories stay unseen. Because Telegram's servers are never told you read anything, unread badges can come back after a restart. Stay offline: your last seen freezes at the last time this was off."));
+
         items.add(UItem.asHeader("Telegram Premium"));
         items.add(UItem.asCheck(ID_HIDE_PREMIUM, "Hide Premium promotions").setChecked(ChihuahuaConfig.hidePremium()));
         items.add(UItem.asShadow("Hides the Premium entry in Settings and most upgrade banners. Premium features you already pay for keep working."));
@@ -84,6 +93,12 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
                 key = ChihuahuaConfig.KEY_HIDE_STORIES;
             } else if (item.id == ID_HIDE_PREMIUM) {
                 key = ChihuahuaConfig.KEY_HIDE_PREMIUM;
+            } else if (item.id == ID_GHOST_READ) {
+                key = ChihuahuaConfig.KEY_GHOST_READ;
+            } else if (item.id == ID_GHOST_TYPING) {
+                key = ChihuahuaConfig.KEY_GHOST_TYPING;
+            } else if (item.id == ID_GHOST_OFFLINE) {
+                key = ChihuahuaConfig.KEY_GHOST_OFFLINE;
             } else {
                 return;
             }

@@ -3,6 +3,11 @@ package org.telegram.messenger;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import org.telegram.tgnet.TLObject;
+import org.telegram.tgnet.TLRPC;
+import org.telegram.tgnet.tl.TL_account;
+import org.telegram.tgnet.tl.TL_stories;
+
 /**
  * Chihuahua Telegram options (Settings → Chihuahua). Kept in the "chihuahua" preferences file,
  * cached in static fields so the hot paths (chat list, profile) never touch disk.
@@ -12,11 +17,17 @@ public class ChihuahuaConfig {
     public static final String KEY_SHOW_ID = "show_id";
     public static final String KEY_HIDE_STORIES = "hide_stories";
     public static final String KEY_HIDE_PREMIUM = "hide_premium";
+    public static final String KEY_GHOST_READ = "ghost_read";
+    public static final String KEY_GHOST_TYPING = "ghost_typing";
+    public static final String KEY_GHOST_OFFLINE = "ghost_offline";
 
     private static volatile boolean loaded;
     private static boolean showId = true;
     private static boolean hideStories = false;
     private static boolean hidePremium = false;
+    private static boolean ghostRead = false;
+    private static boolean ghostTyping = false;
+    private static boolean ghostOffline = false;
 
     private static SharedPreferences prefs() {
         return ApplicationLoader.applicationContext.getSharedPreferences("chihuahua", Context.MODE_PRIVATE);
@@ -34,6 +45,9 @@ public class ChihuahuaConfig {
             showId = p.getBoolean(KEY_SHOW_ID, true);
             hideStories = p.getBoolean(KEY_HIDE_STORIES, false);
             hidePremium = p.getBoolean(KEY_HIDE_PREMIUM, false);
+            ghostRead = p.getBoolean(KEY_GHOST_READ, false);
+            ghostTyping = p.getBoolean(KEY_GHOST_TYPING, false);
+            ghostOffline = p.getBoolean(KEY_GHOST_OFFLINE, false);
             loaded = true;
         }
     }
@@ -53,6 +67,59 @@ public class ChihuahuaConfig {
         return hidePremium;
     }
 
+    public static boolean ghostRead() {
+        load();
+        return ghostRead;
+    }
+
+    public static boolean ghostTyping() {
+        load();
+        return ghostTyping;
+    }
+
+    public static boolean ghostOffline() {
+        load();
+        return ghostOffline;
+    }
+
+    public static boolean ghostModeActive() {
+        load();
+        return ghostRead || ghostTyping || ghostOffline;
+    }
+
+    /**
+     * Ghost mode: called for every outgoing API request. Returns true when the request must
+     * not be sent (the caller then gets a synthetic GHOST_MODE error, which every affected
+     * call site treats as "nothing happened").
+     */
+    public static boolean shouldDropRequest(TLObject request) {
+        load();
+        if (!ghostRead && !ghostTyping && !ghostOffline) {
+            return false;
+        }
+        if (ghostRead) {
+            if (request instanceof TLRPC.TL_messages_readHistory
+                    || request instanceof TLRPC.TL_channels_readHistory
+                    || request instanceof TLRPC.TL_messages_readSavedHistory
+                    || request instanceof TLRPC.TL_messages_readEncryptedHistory
+                    || request instanceof TLRPC.TL_messages_readMessageContents
+                    || request instanceof TLRPC.TL_channels_readMessageContents
+                    || request instanceof TLRPC.TL_messages_readMentions
+                    || request instanceof TLRPC.TL_messages_readReactions
+                    || request instanceof TLRPC.TL_messages_readDiscussion
+                    || request instanceof TL_stories.TL_stories_readStories) {
+                return true;
+            }
+        }
+        if (ghostTyping && request instanceof TLRPC.TL_messages_setTyping) {
+            return true;
+        }
+        if (ghostOffline && request instanceof TL_account.updateStatus && !((TL_account.updateStatus) request).offline) {
+            return true;
+        }
+        return false;
+    }
+
     public static boolean get(String key) {
         load();
         switch (key) {
@@ -62,6 +129,12 @@ public class ChihuahuaConfig {
                 return hideStories;
             case KEY_HIDE_PREMIUM:
                 return hidePremium;
+            case KEY_GHOST_READ:
+                return ghostRead;
+            case KEY_GHOST_TYPING:
+                return ghostTyping;
+            case KEY_GHOST_OFFLINE:
+                return ghostOffline;
             default:
                 return false;
         }
@@ -78,6 +151,15 @@ public class ChihuahuaConfig {
                 break;
             case KEY_HIDE_PREMIUM:
                 hidePremium = value;
+                break;
+            case KEY_GHOST_READ:
+                ghostRead = value;
+                break;
+            case KEY_GHOST_TYPING:
+                ghostTyping = value;
+                break;
+            case KEY_GHOST_OFFLINE:
+                ghostOffline = value;
                 break;
             default:
                 return;

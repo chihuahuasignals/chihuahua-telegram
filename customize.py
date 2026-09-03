@@ -402,6 +402,26 @@ def patch_settings_and_toggles():
          "    public boolean premiumFeaturesBlocked() {\n        return ChihuahuaConfig.hidePremium() || premiumLocked && !getUserConfig().isPremium();\n    }\n"
          "    public boolean premiumPurchaseBlocked() {\n        return ChihuahuaConfig.hidePremium() || premiumLocked;\n    }\n", 1),
     ])
+    header = ("    private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, "
+              "QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {\n")
+    edit("TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java", [
+        (header, header +
+         "        if (org.telegram.messenger.ChihuahuaConfig.shouldDropRequest(object)) {\n"
+         "            // Ghost mode: swallow read receipts / typing / online-status requests.\n"
+         "            if (BuildVars.LOGS_ENABLED) {\n"
+         "                FileLog.d(\"ghost mode: dropped \" + object);\n"
+         "            }\n"
+         "            final TLRPC.TL_error ghostError = new TLRPC.TL_error();\n"
+         "            ghostError.code = 400;\n"
+         "            ghostError.text = \"GHOST_MODE\";\n"
+         "            if (onComplete != null) {\n"
+         "                onComplete.run(null, ghostError);\n"
+         "            } else if (onCompleteTimestamp != null) {\n"
+         "                onCompleteTimestamp.run(null, ghostError, System.currentTimeMillis());\n"
+         "            }\n"
+         "            return;\n"
+         "        }\n", 1),
+    ])
     edit("TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java", [
         ("            newVisibility = !getStoriesController().getHiddenList().isEmpty();\n",
          "            newVisibility = !org.telegram.messenger.ChihuahuaConfig.hideStories() && !getStoriesController().getHiddenList().isEmpty();\n", 1),
