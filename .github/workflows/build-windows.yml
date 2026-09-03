@@ -24,6 +24,9 @@ on:
     branches: [main]
     paths:
       - desktop/**
+      # The theme is a file you load in the app, not part of the build — editing
+      # it must not cost a two-hour Windows run.
+      - '!desktop/theme/**'
       - icons/desktop/**
       - .github/workflows/build-windows.yml
 
