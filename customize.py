@@ -423,6 +423,36 @@ ID_ROW_BIND = """                    } else if (position == chihuahuaIdRow) {
 """
 
 
+GROUP_BADGE = """            if (currentUser != null && !currentMessageObject.isOutOwner()) {
+                final String chihuahuaAge = org.telegram.messenger.ChihuahuaConfig.groupAgeBadge(currentUser.id);
+                if (!chihuahuaAge.isEmpty()) {
+                    if (adminString == null) {
+                        adminString = new SpannableStringBuilder();
+                    } else {
+                        adminString.append(" ");
+                    }
+                    final int chihuahuaStart = adminString.length();
+                    adminString.append(chihuahuaAge);
+                    if (org.telegram.messenger.ChihuahuaConfig.isNewAccount(currentUser.id)) {
+                        adminString.setSpan(new ForegroundColorSpanThemable(Theme.key_text_RedBold), chihuahuaStart, adminString.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                }
+            }
+"""
+
+
+def patch_group_age_badge():
+    """Groups show the estimated account age next to the sender's name, in the slot Telegram
+    already uses for the "admin" label. Accounts under the threshold (Settings -> Chihuahua)
+    are drawn in red, so a throwaway account posting in your group stands out without opening
+    its profile."""
+    anchor = ("            if (adminString != null) {\n"
+              "                StaticLayout staticLayout = new StaticLayout(adminString, Theme.chat_adminPaint, dp(300), Layout.Alignment.ALIGN_NORMAL, 0f, 0f, false);\n")
+    edit("TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java", [
+        (anchor, GROUP_BADGE + anchor, 1),
+    ])
+
+
 def patch_id_row():
     """The user ID gets its own row in the profile (same cell style as the phone number), so the
     status line above keeps room for the last-seen text and the estimated creation date. Tapping
@@ -611,6 +641,7 @@ def patch_theme98():
     patch_profile_header()
     patch_per_account_notifications()
     patch_id_row()
+    patch_group_age_badge()
 
 
 def patch_per_account_notifications():

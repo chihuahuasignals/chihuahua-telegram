@@ -25,6 +25,10 @@ public class ChihuahuaConfig {
     public static final String KEY_GHOST_OFFLINE = "ghost_offline";
     public static final String KEY_BACK_CAMERA = "back_camera";
     public static final String KEY_ACCOUNT_AGE = "account_age";
+    public static final String KEY_FLAG_NEW = "flag_new_in_groups";
+    public static final String KEY_AGE_ALWAYS = "age_always_in_groups";
+    /** Not a switch: months, stored separately (see flagMonths()). */
+    public static final String KEY_FLAG_MONTHS = "flag_new_months";
 
     /** SHA-256 of ("chihuahua:" + activation code), filled in at build time. Empty = no lock. */
     public static final String ACTIVATION_HASH = "%%ACTIVATION_HASH%%";
@@ -39,6 +43,9 @@ public class ChihuahuaConfig {
     private static boolean ghostOffline = false;
     private static boolean backCamera = true;
     private static boolean accountAge = true;
+    private static boolean flagNew = true;
+    private static boolean ageAlways = false;
+    private static int flagMonths = 3;
 
     private static SharedPreferences prefs() {
         return ApplicationLoader.applicationContext.getSharedPreferences("chihuahua", Context.MODE_PRIVATE);
@@ -61,6 +68,9 @@ public class ChihuahuaConfig {
             ghostOffline = p.getBoolean(KEY_GHOST_OFFLINE, false);
             backCamera = p.getBoolean(KEY_BACK_CAMERA, true);
             accountAge = p.getBoolean(KEY_ACCOUNT_AGE, true);
+            flagNew = p.getBoolean(KEY_FLAG_NEW, true);
+            ageAlways = p.getBoolean(KEY_AGE_ALWAYS, false);
+            flagMonths = p.getInt(KEY_FLAG_MONTHS, 3);
             loaded = true;
         }
     }
@@ -137,6 +147,72 @@ public class ChihuahuaConfig {
             return true;
         }
         return false;
+    }
+
+    public static int flagMonths() {
+        load();
+        return flagMonths;
+    }
+
+    public static void setFlagMonths(int months) {
+        load();
+        flagMonths = months;
+        if (ApplicationLoader.applicationContext != null) {
+            prefs().edit().putInt(KEY_FLAG_MONTHS, months).apply();
+        }
+    }
+
+    public static boolean flagNewInGroups() {
+        load();
+        return flagNew;
+    }
+
+    public static boolean ageAlwaysInGroups() {
+        load();
+        return ageAlways;
+    }
+
+    /** Months since the account was (probably) created; -1 when the ID says nothing. */
+    public static int accountAgeMonths(long userId) {
+        long millis = estimatedCreationMillis(userId);
+        if (millis <= 0) {
+            return -1;
+        }
+        long days = (System.currentTimeMillis() - millis) / 86400000L;
+        return (int) (Math.max(0, days) / 30.44);
+    }
+
+    /** True when this account is younger than the "flag new accounts" threshold. */
+    public static boolean isNewAccount(long userId) {
+        load();
+        int months = accountAgeMonths(userId);
+        return months >= 0 && months < flagMonths;
+    }
+
+    /**
+     * Badge for the sender's name row in a group: "2mo", "new", "3y". Empty when the ID says
+     * nothing, or when only new accounts are flagged and this one is not new.
+     */
+    public static String groupAgeBadge(long userId) {
+        load();
+        if (!flagNew && !ageAlways) {
+            return "";
+        }
+        int months = accountAgeMonths(userId);
+        if (months < 0) {
+            return "";
+        }
+        boolean isNew = months < flagMonths;
+        if (!isNew && !ageAlways) {
+            return "";
+        }
+        if (months < 1) {
+            return "new";
+        }
+        if (months < 24) {
+            return months + "mo";
+        }
+        return (months / 12) + "y";
     }
 
     // ---- per-account notifications -----------------------------------------------------------
@@ -284,6 +360,10 @@ public class ChihuahuaConfig {
                 return backCamera;
             case KEY_ACCOUNT_AGE:
                 return accountAge;
+            case KEY_FLAG_NEW:
+                return flagNew;
+            case KEY_AGE_ALWAYS:
+                return ageAlways;
             default:
                 return false;
         }
@@ -315,6 +395,12 @@ public class ChihuahuaConfig {
                 break;
             case KEY_ACCOUNT_AGE:
                 accountAge = value;
+                break;
+            case KEY_FLAG_NEW:
+                flagNew = value;
+                break;
+            case KEY_AGE_ALWAYS:
+                ageAlways = value;
                 break;
             default:
                 return;
