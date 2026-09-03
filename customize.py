@@ -43,7 +43,6 @@ KEYSTORE_PASSWORD = os.environ.get("KEYSTORE_PASSWORD", "").strip()
 KEYSTORE_ALIAS = os.environ.get("KEYSTORE_ALIAS", "chihuahua").strip()
 
 DENSITIES = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
-ICON_BG = "#F4A261"
 
 errors = []
 
@@ -276,21 +275,20 @@ def install_icons():
         dr = res / f"drawable-{d}" / "ic_launcher_dr.webp"
         if dr.exists():
             shutil.copy(ICONS / f"dr-{d}.webp", dr)
-    solid = ('<?xml version="1.0" encoding="utf-8"?>\n'
-             '<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">\n'
-             f'    <solid android:color="{ICON_BG}" />\n'
-             '</shape>\n')
-    for name in ("icon_background.xml", "icon_background_round.xml"):
-        p = res / "drawable" / name
-        if not p.exists():
-            fail(f"missing {p}")
-            continue
-        p.write_text(solid, encoding="utf-8")
-    # Drop the monochrome (themed-icon) layer, which is Telegram's paper plane.
-    for name in ("ic_launcher.xml", "ic_launcher_round.xml"):
-        edit(f"TMessagesProj/src/main/res/mipmap-anydpi-v26/{name}", [
-            ('    <monochrome android:drawable="@drawable/icon_plane" />\n', "", 1),
-        ])
+    # Adaptive icon: gradient bitmap as the background layer, dog sticker as the foreground,
+    # and no monochrome (themed-icon) layer, which would be Telegram's paper plane.
+    for d in DENSITIES:
+        shutil.copy(ICONS / f"background-{d}.png", res / f"mipmap-{d}" / "icon_bg_chihuahua.png")
+    edit("TMessagesProj/src/main/res/mipmap-anydpi-v26/ic_launcher.xml", [
+        ('<background android:drawable="@drawable/icon_background" />',
+         '<background android:drawable="@mipmap/icon_bg_chihuahua" />', 1),
+        ('    <monochrome android:drawable="@drawable/icon_plane" />\n', "", 1),
+    ])
+    edit("TMessagesProj/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml", [
+        ('<background android:drawable="@drawable/icon_background_round" />',
+         '<background android:drawable="@mipmap/icon_bg_chihuahua" />', 1),
+        ('    <monochrome android:drawable="@drawable/icon_plane" />\n', "", 1),
+    ])
     print("  ok  launcher icons installed")
 
 
