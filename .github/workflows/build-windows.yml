@@ -141,11 +141,22 @@ jobs:
 
       - name: Disk space before the libraries.
         shell: bash
-        run: df -h
+        run: df -h | tee disk-before.txt
 
+      # PowerShell + Tee-Object: the whole prepare.py output also goes to libs.log, whose tail
+      # (and the failed stage) ends up on the desktop-status branch when something breaks.
       - name: Libraries (Debug + Release; compiles third-party code, hours on a cold cache).
+        shell: pwsh
         run: |
-          %TBUILD%\%REPO_NAME%\Telegram\build\prepare\win.bat silent qt6
+          $log = Join-Path $env:GITHUB_WORKSPACE 'libs.log'
+          $winbat = Join-Path $env:TBUILD "$env:REPO_NAME\Telegram\build\prepare\win.bat"
+          cmd /c "$winbat silent qt6 2>&1" | Tee-Object -FilePath $log
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::library preparation failed with exit code $LASTEXITCODE"; exit $LASTEXITCODE }
+
+      - name: Disk space after the libraries.
+        if: always()
+        shell: bash
+        run: df -h | tee disk-after.txt
 
       - name: Decide whether to build the app in this run.
         shell: bash
@@ -272,7 +283,13 @@ jobs:
             echo "zip=${{ steps.pack.outputs.zip }}"
             echo "finished=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > STATUS
-          [ -f ../customize.log ] && cp ../customize.log .
+          for f in customize.log disk-before.txt disk-after.txt; do [ -f "../$f" ] && cp "../$f" .; done
+          if [ -f ../libs.log ]; then
+            # prepare.py prints "[i/N](Libraries/<stage>): BUILDING:" / "... FAILED"; keep the last stage's output
+            grep -nE '^\[[0-9]+/[0-9]+\]\(' ../libs.log | tail -n 40 > libs-stages.txt
+            tail -n 400 ../libs.log > libs-log-tail.txt
+            grep -inE 'error|fatal|failed|cannot open|no such file' ../libs.log | grep -viE 'warning|0 error|-Werror|error\.h|errors\.c' | head -n 200 > libs-errors.txt
+          fi
           if [ -f ../build.log ]; then
             tail -n 400 ../build.log > build-log-tail.txt
             grep -inE 'error|fatal|failed|cannot open' ../build.log | grep -viE 'warning|0 error' | head -n 200 > build-errors.txt
