@@ -341,6 +341,37 @@ ACCOUNT_ID_ROWS = """\t\t{
 """
 
 
+PEER_MENU = "Telegram/SourceFiles/window/window_peer_menu.cpp"
+
+ADMINS_CODE = """void Filler::addChihuahuaAdmins() {
+\t// Chihuahua: the admin list in one click, in any group or channel you are
+\t// in. Telegram only offers it inside Manage group, which needs admin rights.
+\tconst auto channel = _peer ? _peer->asChannel() : nullptr;
+\tif (!channel || channel->isMonoforum()) {
+\t\treturn;
+\t}
+\tconst auto navigation = _controller;
+\t_addAction(u"Admins"_q, [=] {
+\t\tParticipantsBoxController::Start(
+\t\t\tnavigation,
+\t\t\tchannel,
+\t\t\tParticipantsRole::Admins);
+\t}, &st::menuIconAdmin);
+}
+
+"""
+
+
+def patch_admins():
+    edit(PEER_MENU, [
+        ('\tvoid addManageChat();\n',
+         '\tvoid addManageChat();\n\tvoid addChihuahuaAdmins();\n', 1),
+        ('void Filler::addBoostChat() {\n', ADMINS_CODE + 'void Filler::addBoostChat() {\n', 1),
+        ('\taddManageChat();\n\taddSetPersonalChannel();\n',
+         '\taddManageChat();\n\taddChihuahuaAdmins();\n\taddSetPersonalChannel();\n', 1),
+    ])
+
+
 def patch_account_id():
     table = age_anchor_table()
     if not table:
@@ -429,6 +460,8 @@ def main():
     patch_moderation()
     # --- account ID + estimated creation month in user profiles
     patch_account_id()
+    # --- "Admins" in a group or channel menu, without needing admin rights
+    patch_admins()
     # --- icons
     art = ROOT / "Telegram" / "Resources" / "art"
     copied = 0
