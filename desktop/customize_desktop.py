@@ -13,8 +13,10 @@ Every edit is anchored on exact upstream text and the script aborts if an anchor
 exactly the expected number of times.
 """
 import os
+import re
 import shutil
 import sys
+import textwrap
 import uuid
 from pathlib import Path
 
@@ -234,6 +236,125 @@ void AddChihuahuaModerationActions(
 """
 
 CONTEXT_MENU = "Telegram/SourceFiles/history/view/history_view_context_menu.cpp"
+PROFILE_ACTIONS = "Telegram/SourceFiles/info/profile/info_profile_actions.cpp"
+
+
+def age_anchor_table():
+    """Read the ID -> date anchor table out of the Android build's ChihuahuaConfig.
+
+    Telegram hands out user IDs in increasing order, so a table of known
+    (id, date) pairs interpolates to a creation month. Both apps read the same
+    table from the same file, so their estimates can never drift apart.
+    """
+    src = HERE.parent / "patches" / "ChihuahuaConfig.java"
+    if not src.exists():
+        fail(f"missing {src} — needed for the account-age table")
+        return None
+    text = src.read_text(encoding="utf-8")
+    ids = re.search(r"ID_ANCHORS\s*=\s*\{([^}]*)\}", text)
+    days = re.search(r"DAY_ANCHORS\s*=\s*\{([^}]*)\}", text)
+    rate = re.search(r"IDS_PER_DAY_RECENT\s*=\s*([0-9.]+)", text)
+    if not (ids and days and rate):
+        fail("ChihuahuaConfig.java: could not read the account-age anchors")
+        return None
+    id_values = [v.strip().rstrip("Ll") for v in ids.group(1).split(",") if v.strip()]
+    day_values = [v.strip() for v in days.group(1).split(",") if v.strip()]
+    if len(id_values) != len(day_values) or len(id_values) < 2:
+        fail(f"account-age anchors: {len(id_values)} ids vs {len(day_values)} days")
+        return None
+    return id_values, day_values, rate.group(1)
+
+
+def account_id_code(id_values, day_values, rate):
+    wrap = lambda vals: "\n".join(
+        "\t" + line for line in textwrap.wrap(", ".join(vals), width=68))
+    return """
+// --- Chihuahua: the numeric account ID, and roughly when it was made. ---
+// Telegram hands out user IDs in increasing order, so a table of known
+// (id, date) pairs interpolates to a creation month. Generated from the
+// Android build's ChihuahuaConfig.java, so both apps agree exactly.
+constexpr auto kChihuahuaAnchors = %(count)d;
+constexpr BareId kChihuahuaIdAnchors[kChihuahuaAnchors] = {
+%(ids)s
+};
+// Days since 1970-01-01, one per entry above.
+constexpr int kChihuahuaDayAnchors[kChihuahuaAnchors] = {
+%(days)s
+};
+// IDs handed out per day past the last anchor.
+constexpr auto kChihuahuaIdsPerDayRecent = %(rate)s;
+
+[[nodiscard]] QString ChihuahuaCreatedEstimate(BareId id) {
+\tif (!id) {
+\t\treturn QString();
+\t} else if (id <= kChihuahuaIdAnchors[0]) {
+\t\treturn u"2013 or earlier"_q;
+\t}
+\tauto day = 0.;
+\tif (id >= kChihuahuaIdAnchors[kChihuahuaAnchors - 1]) {
+\t\tday = kChihuahuaDayAnchors[kChihuahuaAnchors - 1]
+\t\t\t+ (id - kChihuahuaIdAnchors[kChihuahuaAnchors - 1])
+\t\t\t\t/ kChihuahuaIdsPerDayRecent;
+\t} else {
+\t\tauto i = 1;
+\t\twhile (id > kChihuahuaIdAnchors[i]) {
+\t\t\t++i;
+\t\t}
+\t\tday = kChihuahuaDayAnchors[i - 1]
+\t\t\t+ double(id - kChihuahuaIdAnchors[i - 1])
+\t\t\t\t* (kChihuahuaDayAnchors[i] - kChihuahuaDayAnchors[i - 1])
+\t\t\t\t/ double(kChihuahuaIdAnchors[i] - kChihuahuaIdAnchors[i - 1]);
+\t}
+\tconst auto date = QDate(1970, 1, 1).addDays(qint64(day));
+\tconst auto today = QDate::currentDate();
+\treturn QLocale::c().toString(
+\t\t(date > today) ? today : date,
+\t\tu"MMM yyyy"_q);
+}
+""" % {
+        "count": len(id_values),
+        "ids": wrap(id_values),
+        "days": wrap(day_values),
+        "rate": rate,
+    }
+
+
+# Two rows under the phone number: the ID (right-click to copy) and the
+# estimated creation month, matching what the Android build shows in profiles.
+ACCOUNT_ID_ROWS = """\t\t{
+\t\t\tconst auto chihuahuaId = peerToUser(user->id).bare;
+\t\t\taddInfoOneLine(
+\t\t\t\tu"ID"_q,
+\t\t\t\trpl::single(TextWithEntities{ QString::number(chihuahuaId) }),
+\t\t\t\tu"Copy ID"_q,
+\t\t\t\tst::infoProfileLabeledPadding,
+\t\t\t\tst::popupMenuWithIcons);
+\t\t\tconst auto chihuahuaCreated = ChihuahuaCreatedEstimate(chihuahuaId);
+\t\t\tif (!chihuahuaCreated.isEmpty()) {
+\t\t\t\taddInfoOneLine(
+\t\t\t\t\tu"Account created"_q,
+\t\t\t\t\trpl::single(TextWithEntities{
+\t\t\t\t\t\tu"est. "_q + chihuahuaCreated }),
+\t\t\t\t\tu"Copy"_q);
+\t\t\t}
+\t\t}
+"""
+
+
+def patch_account_id():
+    table = age_anchor_table()
+    if not table:
+        return
+    code = account_id_code(*table)
+    edit(PROFILE_ACTIONS, [
+        ('#include <QtGui/QClipboard>\n',
+         '#include <QtGui/QClipboard>\n#include <QtCore/QDate>\n#include <QtCore/QLocale>\n', 1),
+        ('constexpr auto kPeerIdLinkIndex = uint16(1);\n',
+         'constexpr auto kPeerIdLinkIndex = uint16(1);\n' + code, 1),
+        ('\t\tauto label = user->isBot()\n\t\t\t? tr::lng_info_about_label()\n\t\t\t: tr::lng_info_bio_label();\n',
+         ACCOUNT_ID_ROWS
+         + '\t\tauto label = user->isBot()\n\t\t\t? tr::lng_info_about_label()\n\t\t\t: tr::lng_info_bio_label();\n', 1),
+    ])
 
 
 def patch_moderation():
@@ -306,6 +427,8 @@ def main():
         edit(rel, [('u"Telegram"_q', f'u"{APP_NAME}"_q', 1)])
     # --- moderation actions (Ban/Mute/Wipe + report, across every group you manage)
     patch_moderation()
+    # --- account ID + estimated creation month in user profiles
+    patch_account_id()
     # --- icons
     art = ROOT / "Telegram" / "Resources" / "art"
     copied = 0
