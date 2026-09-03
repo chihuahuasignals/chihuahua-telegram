@@ -168,7 +168,10 @@ jobs:
 
       - name: Disk space before the libraries.
         shell: bash
-        run: df -h | tee disk-before.txt
+        run: |
+          df -h | tee disk-before.txt
+          wmic ComputerSystem get TotalPhysicalMemory 2>/dev/null || true
+          nproc
 
       # PowerShell + Tee-Object: the whole prepare.py output also goes to libs.log, whose tail
       # (and the failed stage) ends up on the desktop-status branch when something breaks.
@@ -243,7 +246,11 @@ jobs:
           cmd /c "configure.bat x64 qt6 -D TDESKTOP_API_ID=$env:TG_API_ID -D TDESKTOP_API_HASH=$env:TG_API_HASH -D CMAKE_CONFIGURATION_TYPES=Release -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT= -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON 2>&1" | Tee-Object -FilePath $log
           if ($LASTEXITCODE -ne 0) { Write-Host "::error::configure failed with exit code $LASTEXITCODE"; exit $LASTEXITCODE }
 
-          cmd /c "cmake --build ..\out --config Release --parallel 2>&1" | Tee-Object -FilePath $log -Append
+          # No bare --parallel: tdesktop compiles with /MP, so each MSBuild project already runs one
+          # compiler per core, and --parallel multiplies that by the number of projects. On a 4-core
+          # 16 GB runner that put ~16 cl.exe on Telegram's heaviest files and run 7 died with
+          # "C1060: compiler is out of heap space". One project at a time, two compilers within it.
+          cmd /c "cmake --build ..\out --config Release -- /m:1 /p:CL_MPCount=2 2>&1" | Tee-Object -FilePath $log -Append
           if ($LASTEXITCODE -ne 0) { Write-Host "::error::build failed with exit code $LASTEXITCODE"; exit $LASTEXITCODE }
 
       - name: Package.
