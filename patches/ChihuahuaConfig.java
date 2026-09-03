@@ -27,6 +27,7 @@ public class ChihuahuaConfig {
     public static final String KEY_ACCOUNT_AGE = "account_age";
     public static final String KEY_FLAG_NEW = "flag_new_in_groups";
     public static final String KEY_QUICK_BAN = "quick_ban";
+    public static final String KEY_KEEP_CONNECTED = "keep_connected";
     public static final String KEY_AGE_ALWAYS = "age_always_in_groups";
     /** Not a switch: months, stored separately (see flagMonths()). */
     public static final String KEY_FLAG_MONTHS = "flag_new_months";
@@ -46,6 +47,7 @@ public class ChihuahuaConfig {
     private static boolean accountAge = true;
     private static boolean flagNew = true;
     private static boolean quickBan = true;
+    private static boolean keepConnected = true;
     private static boolean ageAlways = false;
     private static int flagMonths = 3;
 
@@ -72,6 +74,7 @@ public class ChihuahuaConfig {
             accountAge = p.getBoolean(KEY_ACCOUNT_AGE, true);
             flagNew = p.getBoolean(KEY_FLAG_NEW, true);
             quickBan = p.getBoolean(KEY_QUICK_BAN, true);
+            keepConnected = p.getBoolean(KEY_KEEP_CONNECTED, true);
             ageAlways = p.getBoolean(KEY_AGE_ALWAYS, false);
             flagMonths = p.getInt(KEY_FLAG_MONTHS, 3);
             loaded = true;
@@ -224,6 +227,78 @@ public class ChihuahuaConfig {
         return (months / 12) + "y";
     }
 
+    // ---- keeping every account connected -----------------------------------------------------
+    // This build has no working Firebase push (Telegram's push servers can only deliver to tokens
+    // from Telegram's own Firebase project), so notifications depend entirely on Telegram's
+    // keep-alive service and its background connection. Two things make that unreliable here:
+    //   * Telegram writes the "Keep-Alive Service" switch into the SELECTED account's preferences
+    //     but reads it back from account 0's, so turning it on while any other account is selected
+    //     silently does nothing;
+    //   * "Background Connection" is per account, so with many accounts logged in most of them have
+    //     no persistent connection and only deliver when the app is opened.
+    // applyKeepConnected() sets both, for every logged-in account, and is called on every start.
+
+    public static boolean keepConnected() {
+        load();
+        return keepConnected;
+    }
+
+    public static void applyKeepConnected() {
+        load();
+        if (!keepConnected || ApplicationLoader.applicationContext == null) {
+            return;
+        }
+        try {
+            MessagesController.getGlobalNotificationsSettings().edit().putBoolean("pushService", true).apply();
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                if (!UserConfig.getInstance(a).isClientActivated()) {
+                    continue;
+                }
+                MessagesController.getNotificationsSettings(a).edit()
+                        .putBoolean("pushConnection", true)
+                        .putBoolean("pushService", true)
+                        .apply();
+                org.telegram.tgnet.ConnectionsManager.getInstance(a).setPushConnectionEnabled(true);
+            }
+            ApplicationLoader.startPushService();
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+    }
+
+    /** One line for the settings screen: what the app is actually relying on right now. */
+    public static String notificationStatus() {
+        if (ApplicationLoader.applicationContext == null) {
+            return "";
+        }
+        int accounts = 0, connected = 0;
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (!UserConfig.getInstance(a).isClientActivated()) {
+                continue;
+            }
+            accounts++;
+            if (MessagesController.getNotificationsSettings(a).getBoolean("pushConnection", MessagesController.getInstance(a).backgroundConnection)) {
+                connected++;
+            }
+        }
+        boolean keepAlive = MessagesController.getGlobalNotificationsSettings().getBoolean("pushService", false);
+        String push;
+        String status = SharedConfig.pushStringStatus == null ? "" : SharedConfig.pushStringStatus;
+        if (SharedConfig.pushString != null && !SharedConfig.pushString.isEmpty() && !SharedConfig.pushString.startsWith("__")) {
+            push = "Google push: working";
+        } else if (status.contains("NO_GOOGLE_PLAY_SERVICES")) {
+            push = "Google push: no Play Services";
+        } else if (status.contains("FAILED")) {
+            push = "Google push: unavailable (normal for this build)";
+        } else if (status.contains("GENERATING")) {
+            push = "Google push: still trying";
+        } else {
+            push = "Google push: unavailable (normal for this build)";
+        }
+        return push + "\nKeep-alive service: " + (keepAlive ? "on" : "OFF")
+                + "\nBackground connection: " + connected + " of " + accounts + " accounts";
+    }
+
     // ---- per-account notifications -----------------------------------------------------------
     // Telegram only has one global "show notifications from all accounts" switch. With many
     // accounts logged in you usually want a handful noisy and the rest silent, so every account
@@ -373,6 +448,8 @@ public class ChihuahuaConfig {
                 return flagNew;
             case KEY_QUICK_BAN:
                 return quickBan;
+            case KEY_KEEP_CONNECTED:
+                return keepConnected;
             case KEY_AGE_ALWAYS:
                 return ageAlways;
             default:
@@ -412,6 +489,9 @@ public class ChihuahuaConfig {
                 break;
             case KEY_QUICK_BAN:
                 quickBan = value;
+                break;
+            case KEY_KEEP_CONNECTED:
+                keepConnected = value;
                 break;
             case KEY_AGE_ALWAYS:
                 ageAlways = value;

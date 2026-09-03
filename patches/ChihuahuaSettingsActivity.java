@@ -36,6 +36,8 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
     private static final int ID_ACCOUNT_AGE = 8;
     private static final int ID_FLAG_NEW = 20;
     private static final int ID_QUICK_BAN = 22;
+    private static final int ID_KEEP_CONNECTED = 23;
+    private static final int ID_NOTIF_STATUS = 24;
     private static final int ID_AGE_ALWAYS = 21;
     /** Threshold rows use ID_MONTHS_BASE + months. */
     private static final int ID_MONTHS_BASE = 200;
@@ -101,6 +103,9 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
         }
         if (activated > 1) {
             items.add(UItem.asHeader("Notifications"));
+            items.add(UItem.asCheck(ID_KEEP_CONNECTED, "Keep every account connected").setChecked(ChihuahuaConfig.keepConnected()));
+            items.add(UItem.asButton(ID_NOTIF_STATUS, "Re-apply and refresh"));
+            items.add(UItem.asShadow(ChihuahuaConfig.notificationStatus() + "\n\nThis build cannot use Google push (that needs a Firebase project of Telegram's), so notifications come from Telegram's own background connection. Telegram only applies its Keep-Alive switch to the first account and its Background Connection switch to one account at a time \u2014 this turns both on for every account, every start. Android also has to be told not to sleep the app: hold the icon \u2192 App info \u2192 Battery \u2192 no restrictions, and on Xiaomi/Redmi also turn on Autostart."));
             for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
                 UserConfig config = UserConfig.getInstance(a);
                 if (!config.isClientActivated()) {
@@ -146,6 +151,13 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
     }
 
     private void onClick(UItem item, View view, int position, float x, float y) {
+        if (item.id == ID_NOTIF_STATUS) {
+            ChihuahuaConfig.applyKeepConnected();
+            if (listView != null && listView.adapter != null) {
+                listView.adapter.update(true);
+            }
+            return;
+        }
         if (item.id > ID_MONTHS_BASE && item.id <= ID_MONTHS_BASE + 12) {
             ChihuahuaConfig.setFlagMonths(item.id - ID_MONTHS_BASE);
             if (listView != null && listView.adapter != null) {
@@ -182,6 +194,8 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
                 key = ChihuahuaConfig.KEY_BACK_CAMERA;
             } else if (item.id == ID_ACCOUNT_AGE) {
                 key = ChihuahuaConfig.KEY_ACCOUNT_AGE;
+            } else if (item.id == ID_KEEP_CONNECTED) {
+                key = ChihuahuaConfig.KEY_KEEP_CONNECTED;
             } else if (item.id == ID_QUICK_BAN) {
                 key = ChihuahuaConfig.KEY_QUICK_BAN;
             } else if (item.id == ID_FLAG_NEW) {
@@ -192,6 +206,9 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
                 return;
             }
             ChihuahuaConfig.set(key, !ChihuahuaConfig.get(key));
+            if (ChihuahuaConfig.KEY_KEEP_CONNECTED.equals(key)) {
+                ChihuahuaConfig.applyKeepConnected();
+            }
             if (listView != null && listView.adapter != null) {
                 listView.adapter.update(true);
             }

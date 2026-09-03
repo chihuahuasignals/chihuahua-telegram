@@ -56,9 +56,14 @@ You can also press **Actions → Build Android APK → Run workflow** to rebuild
 
 ## After installing
 
-- Settings → Notifications and Sounds → scroll to the bottom → turn on **Keep-Alive Service** and
-  **Background Connection**. This app cannot use Google push notifications (that needs a Firebase
-  project registered to this package name), so it keeps its own connection open instead.
+- **Notifications.** This app cannot use Google push (Telegram's push servers only deliver to tokens
+  from Telegram's own Firebase project), so notifications come from Telegram's background connection.
+  Settings → Chihuahua → Notifications → **Keep every account connected** turns on the keep-alive
+  service and the background connection for every logged-in account on each start, which Telegram's
+  own switches do not do (it stores Keep-Alive against the first account only, and Background
+  Connection one account at a time). The same screen shows what the app is currently relying on.
+- Android must also be told not to sleep the app: hold the icon → App info → Battery → **no
+  restrictions**; on Xiaomi/Redmi also App info → **Autostart** on, and lock the app in Recents.
 - Log-in codes for a third-party app are usually delivered to your existing Telegram session, not by SMS.
   Keep each account logged in on the official app the first time you add it here.
 - Telegram's anti-spam runs on their servers. Many accounts on one phone doing marketing-like

@@ -613,7 +613,8 @@ def patch_settings_and_toggles():
     on_resume = "    @Override\n    protected void onResume() {\n        super.onResume();\n"
     on_create = "    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n"
     edit("TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java", [
-        (on_resume, on_resume + "        chihuahuaCheckActivation();\n", 1),
+        (on_resume, on_resume + "        chihuahuaCheckActivation();\n"
+                   "        org.telegram.messenger.ChihuahuaConfig.applyKeepConnected();\n", 1),
         (on_create, ACTIVATION_GATE + on_create, 1),
     ])
     lang_item = ("        items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, "
