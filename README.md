@@ -64,11 +64,14 @@ You can also press **Actions → Build Android APK → Run workflow** to rebuild
 
 ## Windows desktop
 
-`.github/workflows/build-windows.yml` builds Telegram Desktop 7.1.5 (x64) with the same name, icon and
-32-account limit, from `desktop/customize_desktop.py`. The third-party libraries take ~2-3 hours to
-compile the first time and are then cached; a run that compiled them stops there — run it once more
-(Actions → Build Windows desktop → Run workflow) and the second run produces the app in ~1-2 hours.
+`.github/workflows/build-windows.yml` builds Telegram Desktop 7.1.5 (x64, Release) with the same name, icon
+and 32-account limit, from `desktop/customize_desktop.py`. The third-party libraries (Debug and Release —
+a Release app cannot link against the Debug-only libraries Telegram's own CI builds) take ~2-3 hours to
+compile the first time and are then cached; a run that compiled them stops there and automatically starts
+a second run, which produces the app from the cached libraries in ~1-2 hours.
 Releases are tagged `desktop-v…`; unzip and run the .exe (portable, data in `%APPDATA%\Chihuahua Telegram`).
+Keep the repository public while Windows builds are running: Windows minutes count double against the
+2,000 free minutes of a private repository, and private repositories get slower runners.
 
 ## Files
 

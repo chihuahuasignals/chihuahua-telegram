@@ -1,16 +1,23 @@
 name: Build Windows desktop
 
 # Builds Telegram Desktop (x64, Qt 6, Release) from the pinned tdesktop tag with the Chihuahua
-# customizations. Mirrors tdesktop's own .github/workflows/win.yml. The third-party libraries
-# take ~2-3 hours to compile the first time and are cached; to stay clear of GitHub's 6-hour job
-# limit, a run that had to build the libraries from scratch stops there — run it once more and the
-# second run (libraries from cache) builds the app in ~1-2 hours.
+# customizations. Mirrors tdesktop's own .github/workflows/win.yml, except that the third-party
+# libraries are built in Debug AND Release (tdesktop's CI passes "skip-release" to win.bat and
+# builds a Debug app; a Release app needs Release libraries — without them the very first link
+# step fails with "cannot open input file Qt6Core.lib"). The libraries take ~2-3 hours to compile
+# the first time and are then cached. To stay clear of GitHub's 6-hour job limit, a run that had
+# to build the libraries stops there and dispatches a second run, which builds the app from the
+# cached libraries in ~1-2 hours.
 
 on:
   workflow_dispatch:
     inputs:
       force_build:
         description: "Build the app even when the libraries were not cached (risks the 6-hour limit)"
+        type: boolean
+        default: false
+      chained:
+        description: "Set automatically when a libraries-only run dispatches the follow-up build"
         type: boolean
         default: false
   push:
@@ -22,6 +29,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # a libraries-only run dispatches the follow-up app build
 
 concurrency:
   group: build-windows
@@ -114,8 +122,12 @@ jobs:
             !${{ env.LibrariesPath }}\[qQ]t[_-]*
             ${{ env.LibrariesPath }}\cache_keys\*
             !${{ env.LibrariesPath }}\cache_keys\[qQ]t[_-]*
-          key: ${{ runner.OS }}-x64-libs-v2-${{ env.CACHE_KEY }}
-          restore-keys: ${{ runner.OS }}-x64-libs-v2-
+          # "rel" = Debug + Release libraries. Older "v2" caches (Debug only) are used as a
+          # starting point so that stages without a Release variant are not rebuilt.
+          key: ${{ runner.OS }}-x64-libs-rel-${{ env.CACHE_KEY }}
+          restore-keys: |
+            ${{ runner.OS }}-x64-libs-rel-
+            ${{ runner.OS }}-x64-libs-v2-
 
       - name: Qt cache.
         id: cache-qt
@@ -124,12 +136,16 @@ jobs:
           path: |
             ${{ env.LibrariesPath }}\[qQ]t[_-]*
             ${{ env.LibrariesPath }}\cache_keys\[qQ]t[_-]*
-          key: ${{ runner.OS }}-x64-qt6-${{ env.CACHE_KEY }}
-          restore-keys: ${{ runner.OS }}-x64-qt6-
+          key: ${{ runner.OS }}-x64-qt6-rel-${{ env.CACHE_KEY }}
+          restore-keys: ${{ runner.OS }}-x64-qt6-rel-
 
-      - name: Libraries (compiles third-party code; hours on a cold cache).
+      - name: Disk space before the libraries.
+        shell: bash
+        run: df -h
+
+      - name: Libraries (Debug + Release; compiles third-party code, hours on a cold cache).
         run: |
-          %TBUILD%\%REPO_NAME%\Telegram\build\prepare\win.bat skip-release silent qt6
+          %TBUILD%\%REPO_NAME%\Telegram\build\prepare\win.bat silent qt6
 
       - name: Decide whether to build the app in this run.
         shell: bash
@@ -156,27 +172,27 @@ jobs:
       - name: Apply Chihuahua customizations.
         if: env.BUILD_NOW == 'true'
         shell: bash
-        run: python desktop/customize_desktop.py "$TBUILD/$REPO_NAME"
+        run: |
+          python desktop/customize_desktop.py "$TBUILD/$REPO_NAME" 2>&1 | tee customize.log
+          exit "${PIPESTATUS[0]}"
 
+      # PowerShell so that the whole configure + build output is also written to build.log,
+      # whose tail ends up on the desktop-status branch (the Actions log needs a sign-in).
       - name: Telegram Desktop build (Release).
         if: env.BUILD_NOW == 'true'
+        shell: pwsh
         env:
           TG_API_ID: ${{ secrets.TG_API_ID }}
           TG_API_HASH: ${{ secrets.TG_API_HASH }}
         run: |
-          cd %TBUILD%\%REPO_NAME%\Telegram
+          $log = Join-Path $env:GITHUB_WORKSPACE 'build.log'
+          Set-Location (Join-Path $env:TBUILD "$env:REPO_NAME\Telegram")
 
-          call configure.bat ^
-          x64 ^
-          qt6 ^
-          -D TDESKTOP_API_ID=%TG_API_ID% ^
-          -D TDESKTOP_API_HASH=%TG_API_HASH% ^
-          -D CMAKE_CONFIGURATION_TYPES=Release ^
-          -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT= ^
-          -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON ^
-          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON
+          cmd /c "configure.bat x64 qt6 -D TDESKTOP_API_ID=$env:TG_API_ID -D TDESKTOP_API_HASH=$env:TG_API_HASH -D CMAKE_CONFIGURATION_TYPES=Release -D CMAKE_MSVC_DEBUG_INFORMATION_FORMAT= -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON 2>&1" | Tee-Object -FilePath $log
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::configure failed with exit code $LASTEXITCODE"; exit $LASTEXITCODE }
 
-          cmake --build ..\out --config Release --parallel
+          cmd /c "cmake --build ..\out --config Release --parallel 2>&1" | Tee-Object -FilePath $log -Append
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::build failed with exit code $LASTEXITCODE"; exit $LASTEXITCODE }
 
       - name: Package.
         if: env.BUILD_NOW == 'true'
@@ -227,6 +243,15 @@ jobs:
             --notes "Telegram Desktop ${{ steps.pack.outputs.version }} source. Max accounts: ${MAX_ACCOUNTS}. Unzip and run the .exe (portable). SmartScreen: More info -> Run anyway."
           echo "- Release: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" >> $GITHUB_STEP_SUMMARY
 
+      - name: Dispatch the app build now that the libraries are cached.
+        if: env.BUILD_NOW == 'false' && github.event.inputs.chained != 'true' && success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run build-windows.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" -f chained=true
+          echo "- A follow-up run was dispatched; it builds the app from the cached libraries." >> $GITHUB_STEP_SUMMARY
+
       - name: Record status (branch desktop-status).
         if: always()
         shell: bash
@@ -239,12 +264,19 @@ jobs:
           {
             echo "result=${{ job.status }}"
             echo "built=${BUILD_NOW:-unknown}"
+            echo "libs_cache_hit=${{ steps.cache-libs.outputs.cache-hit }}"
+            echo "qt_cache_hit=${{ steps.cache-qt.outputs.cache-hit }}"
             echo "run=${{ github.run_number }}"
             echo "run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo "commit=${{ github.sha }}"
             echo "zip=${{ steps.pack.outputs.zip }}"
             echo "finished=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > STATUS
+          [ -f ../customize.log ] && cp ../customize.log .
+          if [ -f ../build.log ]; then
+            tail -n 400 ../build.log > build-log-tail.txt
+            grep -inE 'error|fatal|failed|cannot open' ../build.log | grep -viE 'warning|0 error' | head -n 200 > build-errors.txt
+          fi
           git add -A
           git -c user.name=build-bot -c user.email=build-bot@users.noreply.github.com commit -q -m "desktop ${{ github.run_number }}: ${{ job.status }}"
           git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" desktop-status
