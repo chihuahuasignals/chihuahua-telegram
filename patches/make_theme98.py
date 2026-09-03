@@ -42,9 +42,13 @@ put(FACE, "profile_actionBackground")
 put(PRESSED, "profile_actionPressedBackground")
 put(BLACK, "profile_actionIcon")
 put(NAVY2, "actionBarDefaultSelector", "actionBarTabSelector", "avatar_actionBarSelectorBlue", "actionBarDefaultArchivedSelector")
-put(FACE, "actionBarDefaultSubmenuBackground", "actionBarActionModeDefault")
-put(BLACK, "actionBarDefaultSubmenuItem", "actionBarDefaultSubmenuItemIcon", "actionBarActionModeDefaultIcon")
-put(SHADOW, "actionBarDefaultSubmenuSeparator", "actionBarActionModeDefaultTop")
+put(FACE, "actionBarDefaultSubmenuBackground")
+put(BLACK, "actionBarDefaultSubmenuItem", "actionBarDefaultSubmenuItemIcon")
+put(SHADOW, "actionBarDefaultSubmenuSeparator")
+# select mode ("1 Selected" + the edit/copy/forward/delete icons) shares the navy header pills,
+# so its icons and count have to be white, not the Win98 black of a grey toolbar.
+put(NAVY, "actionBarActionModeDefault", "actionBarActionModeDefaultTop")
+put(WHITE, "actionBarActionModeDefaultIcon")
 put(PRESSED, "actionBarActionModeDefaultSelector", "actionBarWhiteSelector")
 
 # --- windows, lists, text
@@ -141,7 +145,7 @@ T["chat_inTextSelectionHighlight"] = "#5A000080"
 T["chat_outTextSelectionHighlight"] = "#5A000080"
 T["chat_TextSelectionCursor"] = NAVY
 T["chat_messagePanelVoiceDelete"] = "#FF0000"
-T["actionBarActionModeDefaultSelector"] = "#33000080"
+T["actionBarActionModeDefaultSelector"] = "#33FFFFFF"
 T["chats_draft"] = "#FF0000"
 T["text_RedRegular"] = "#FF0000"
 T["text_RedBold"] = "#FF0000"
