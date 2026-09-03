@@ -1,7 +1,12 @@
 # Chihuahua Telegram
 
-Your own build of Telegram for Android with the account limit raised (32 accounts instead of 3)
-and an **Add to group** entry in every user's profile menu (⋮), like BGram. Nothing else in Telegram is changed. Built on GitHub's servers from the official
+Your own build of Telegram for Android with the account limit raised (32 accounts instead of 3) plus:
+
+- **Add to Group**, **Copy ID** and **Ban from all my groups** in every user's profile menu (⋮); **Copy ID** in group/channel menus too.
+- The user's ID shown next to their online status in profiles (switchable).
+- **Settings → Chihuahua**: hide the Stories bar, hide Telegram Premium promotions, toggle the ID display.
+
+Nothing else in Telegram is changed. Built on GitHub's servers from the official
 [DrKLO/Telegram](https://github.com/DrKLO/Telegram) source (GPL v2).
 
 ## Get the APK

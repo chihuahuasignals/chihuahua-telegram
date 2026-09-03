@@ -304,6 +304,112 @@ ADD_TO_GROUP_HANDLER = (
     "                    presentFragment(fragment);\n"
 )
 
+CONTACT_SHORTCUT_ANCHOR = (
+    "                if (!isBot && getContactsController().contactsDict.get(userId) != null) {\n"
+    "                    otherItem.addSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString(R.string.AddShortcut));\n"
+)
+CHAT_MENU_ANCHOR = (
+    "        } else if (chatId != 0) {\n"
+    "            TLRPC.Chat chat = getMessagesController().getChat(chatId);\n"
+    "            hasVoiceChatItem = false;\n"
+)
+STATUS_ANCHOR = "                newString2 = LocaleController.formatUserStatus(currentAccount, user, isOnline, shortStatus ? new boolean[1] : null);\n"
+
+COPY_ID_HANDLER = (
+    "                } else if (id == chihuahua_copy_id) {\n"
+    "                    String idText;\n"
+    "                    if (userId != 0) {\n"
+    "                        idText = String.valueOf(userId);\n"
+    "                    } else {\n"
+    "                        TLRPC.Chat chat = getMessagesController().getChat(chatId);\n"
+    "                        idText = (ChatObject.isChannel(chat) ? \"-100\" : \"-\") + chatId;\n"
+    "                    }\n"
+    "                    AndroidUtilities.addToClipboard(idText);\n"
+    "                    if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {\n"
+    "                        BulletinFactory.of(ProfileActivity.this).createCopyBulletin(\"ID \" + idText + \" copied\").show();\n"
+    "                    }\n"
+)
+
+BAN_EVERYWHERE_HANDLER = (
+    "                } else if (id == chihuahua_ban_everywhere) {\n"
+    "                    final TLRPC.User user = getMessagesController().getUser(userId);\n"
+    "                    if (user == null) {\n"
+    "                        return;\n"
+    "                    }\n"
+    "                    final ArrayList<TLRPC.Chat> chats = new ArrayList<>();\n"
+    "                    for (TLRPC.Dialog dialog : getMessagesController().getAllDialogs()) {\n"
+    "                        if (dialog.id >= 0) {\n"
+    "                            continue;\n"
+    "                        }\n"
+    "                        TLRPC.Chat chat = getMessagesController().getChat(-dialog.id);\n"
+    "                        if (chat == null || chat.left || chat.kicked || ChatObject.isChannelAndNotMegaGroup(chat) || !ChatObject.canBlockUsers(chat)) {\n"
+    "                            continue;\n"
+    "                        }\n"
+    "                        chats.add(chat);\n"
+    "                    }\n"
+    "                    if (chats.isEmpty()) {\n"
+    "                        if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {\n"
+    "                            BulletinFactory.of(ProfileActivity.this).createSimpleBulletin(R.raw.error, \"You are not an admin with ban rights in any group.\").show();\n"
+    "                        }\n"
+    "                        return;\n"
+    "                    }\n"
+    "                    final String groupsWord = chats.size() == 1 ? \" group\" : \" groups\";\n"
+    "                    AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), resourcesProvider);\n"
+    "                    builder.setTitle(\"Ban from all my groups\");\n"
+    "                    builder.setMessage(AndroidUtilities.replaceTags(\"Ban **\" + UserObject.getUserName(user) + \"** from \" + chats.size() + groupsWord + \" you manage? They will be removed and cannot rejoin.\"));\n"
+    "                    builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);\n"
+    "                    builder.setPositiveButton(\"Ban\", (di, i) -> {\n"
+    "                        for (TLRPC.Chat chat : chats) {\n"
+    "                            getMessagesController().deleteParticipantFromChat(chat.id, user, chat, false, false);\n"
+    "                        }\n"
+    "                        if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {\n"
+    "                            BulletinFactory.of(ProfileActivity.this).createSimpleBulletin(R.raw.ic_ban, \"Banned from \" + chats.size() + groupsWord).show();\n"
+    "                        }\n"
+    "                    });\n"
+    "                    AlertDialog banDialog = builder.create();\n"
+    "                    showDialog(banDialog);\n"
+    "                    TextView banButton = (TextView) banDialog.getButton(DialogInterface.BUTTON_POSITIVE);\n"
+    "                    if (banButton != null) {\n"
+    "                        banButton.setTextColor(getThemedColor(Theme.key_text_RedBold));\n"
+    "                    }\n"
+)
+
+
+def patch_settings_and_toggles():
+    """Settings → Chihuahua screen (new classes copied from patches/) plus the switches it controls:
+    hide the Stories bar, hide Premium promotions, show IDs in profiles."""
+    src = ROOT / "TMessagesProj/src/main/java/org/telegram"
+    for name, sub in (("ChihuahuaConfig.java", "messenger"), ("ChihuahuaSettingsActivity.java", "ui")):
+        p = HERE / "patches" / name
+        if not p.exists():
+            fail(f"missing {p}")
+            continue
+        shutil.copy(p, src / sub / name)
+    print("  ok  Chihuahua settings classes copied")
+    lang_item = ("        items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, "
+                 "R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));\n")
+    lang_case = "            case 10:\n                presentSettingFragment(new LanguageSelectActivity());\n                break;\n"
+    edit("TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java", [
+        (lang_item, lang_item +
+         "        items.add(SettingCell.Factory.of(70, IconBackgroundColors.ORANGE_DEEP.top, IconBackgroundColors.ORANGE_DEEP.bottom, "
+         "R.drawable.settings_features, \"Chihuahua\", \"IDs in profiles, Stories bar, Premium promos\"));\n", 1),
+        (lang_case, lang_case +
+         "            case 70:\n                presentSettingFragment(new ChihuahuaSettingsActivity());\n                break;\n", 1),
+    ])
+    edit("TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java", [
+        ("    public boolean premiumFeaturesBlocked() {\n        return premiumLocked && !getUserConfig().isPremium();\n    }\n"
+         "    public boolean premiumPurchaseBlocked() {\n        return premiumLocked;\n    }\n",
+         "    public boolean premiumFeaturesBlocked() {\n        return ChihuahuaConfig.hidePremium() || premiumLocked && !getUserConfig().isPremium();\n    }\n"
+         "    public boolean premiumPurchaseBlocked() {\n        return ChihuahuaConfig.hidePremium() || premiumLocked;\n    }\n", 1),
+    ])
+    edit("TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java", [
+        ("            newVisibility = !getStoriesController().getHiddenList().isEmpty();\n",
+         "            newVisibility = !org.telegram.messenger.ChihuahuaConfig.hideStories() && !getStoriesController().getHiddenList().isEmpty();\n", 1),
+        ("            newVisibility = !onlySelfStories && getStoriesController().hasStories();\n",
+         "            newVisibility = !org.telegram.messenger.ChihuahuaConfig.hideStories() && !onlySelfStories && getStoriesController().hasStories();\n", 1),
+    ])
+
+
 
 def patch_add_to_group():
     f = "TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java"
@@ -312,12 +418,29 @@ def patch_add_to_group():
     edit(f, [
         ("    private final static int invite_to_group = 9;\n",
          "    private final static int invite_to_group = 9;\n"
-         "    private final static int chihuahua_add_to_group = 90;\n", 1),
+         "    private final static int chihuahua_add_to_group = 90;\n"
+         "    private final static int chihuahua_copy_id = 91;\n"
+         "    private final static int chihuahua_ban_everywhere = 92;\n", 1),
         (menu_anchor,
          menu_anchor +
          "                    otherItem.addSubItem(chihuahua_add_to_group, R.drawable.msg_addbot, LocaleController.getString(R.string.AddToGroup));\n", 1),
         ("                } else if (id == invite_to_group) {\n",
-         ADD_TO_GROUP_HANDLER + "                } else if (id == invite_to_group) {\n", 1),
+         ADD_TO_GROUP_HANDLER + COPY_ID_HANDLER + BAN_EVERYWHERE_HANDLER + "                } else if (id == invite_to_group) {\n", 1),
+        # "Copy ID" + "Ban from all my groups" in a person's profile menu (placed before the contact's Add-to-Home-screen entry)
+        (CONTACT_SHORTCUT_ANCHOR,
+         "                otherItem.addSubItem(chihuahua_copy_id, R.drawable.msg_copy, \"Copy ID\");\n"
+         "                if (!isBot && !UserObject.isDeleted(user) && !UserObject.isUserSelf(user)) {\n"
+         "                    otherItem.addSubItem(chihuahua_ban_everywhere, R.drawable.msg_block2, \"Ban from all my groups\").setColors(getThemedColor(Theme.key_text_RedRegular), getThemedColor(Theme.key_text_RedRegular));\n"
+         "                }\n" + CONTACT_SHORTCUT_ANCHOR, 1),
+        # "Copy ID" in a group/channel profile menu
+        (CHAT_MENU_ANCHOR,
+         CHAT_MENU_ANCHOR + "            otherItem.addSubItem(chihuahua_copy_id, R.drawable.msg_copy, \"Copy ID\");\n", 1),
+        # user ID next to the online status under the name (toggle in Settings → Chihuahua)
+        (STATUS_ANCHOR,
+         STATUS_ANCHOR +
+         "                if (org.telegram.messenger.ChihuahuaConfig.showIdInProfile()) {\n"
+         "                    newString2 = newString2 + \" \u00b7 ID \" + user.id;\n"
+         "                }\n", 1),
     ])
 
 
@@ -380,6 +503,7 @@ def main():
     patch_google_services()
     patch_account_type()
     patch_add_to_group()
+    patch_settings_and_toggles()
     install_icons()
     if errors:
         print(f"\n{len(errors)} problem(s) — the Telegram source no longer matches the anchors above.")
