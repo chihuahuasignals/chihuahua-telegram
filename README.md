@@ -62,8 +62,14 @@ You can also press **Actions → Build Android APK → Run workflow** to rebuild
   service and the background connection for every logged-in account on each start, which Telegram's
   own switches do not do (it stores Keep-Alive against the first account only, and Background
   Connection one account at a time). The same screen shows what the app is currently relying on.
-- Android must also be told not to sleep the app: hold the icon → App info → Battery → **no
-  restrictions**; on Xiaomi/Redmi also App info → **Autostart** on, and lock the app in Recents.
+  Telegram's keep-alive service is a plain background service that Android 8+ stops a minute after
+  the app leaves the screen (harmless for the official app, which Firebase wakes); here it is a real
+  foreground service with a quiet ongoing notification, declared `specialUse` so Android 15's
+  six-hour daily cap on `dataSync` services does not apply.
+- Android must also be told not to sleep the app. Settings → Chihuahua → Notifications offers
+  **Stop Android sleeping the app** (the battery-optimisation exemption). On Samsung also check
+  Settings → Battery → **Background usage limits** and remove the app from Sleeping/Deep sleeping
+  apps; on Xiaomi/Redmi turn on **Autostart**. Locking the app in Recents helps on both.
 - Log-in codes for a third-party app are usually delivered to your existing Telegram session, not by SMS.
   Keep each account logged in on the official app the first time you add it here.
 - Telegram's anti-spam runs on their servers. Many accounts on one phone doing marketing-like

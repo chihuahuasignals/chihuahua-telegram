@@ -1,6 +1,11 @@
 package org.telegram.ui;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -38,6 +43,7 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
     private static final int ID_QUICK_BAN = 22;
     private static final int ID_KEEP_CONNECTED = 23;
     private static final int ID_NOTIF_STATUS = 24;
+    private static final int ID_BATTERY = 25;
     private static final int ID_AGE_ALWAYS = 21;
     /** Threshold rows use ID_MONTHS_BASE + months. */
     private static final int ID_MONTHS_BASE = 200;
@@ -105,6 +111,9 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
             items.add(UItem.asHeader("Notifications"));
             items.add(UItem.asCheck(ID_KEEP_CONNECTED, "Keep every account connected").setChecked(ChihuahuaConfig.keepConnected()));
             items.add(UItem.asButton(ID_NOTIF_STATUS, "Re-apply and refresh"));
+            if (!chihuahuaBatteryUnrestricted()) {
+                items.add(UItem.asButton(ID_BATTERY, "Stop Android sleeping the app"));
+            }
             items.add(UItem.asShadow(ChihuahuaConfig.notificationStatus() + "\n\nThis build cannot use Google push (that needs a Firebase project of Telegram's), so notifications come from Telegram's own background connection. Telegram only applies its Keep-Alive switch to the first account and its Background Connection switch to one account at a time \u2014 this turns both on for every account, every start. Android also has to be told not to sleep the app: hold the icon \u2192 App info \u2192 Battery \u2192 no restrictions, and on Xiaomi/Redmi also turn on Autostart."));
             for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
                 UserConfig config = UserConfig.getInstance(a);
@@ -150,7 +159,34 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
         items.add(UItem.asShadow("Chihuahua Telegram is an unofficial build of Telegram for Android and is not affiliated with Telegram."));
     }
 
+    /** True when Android is already leaving this app alone in the background. */
+    private boolean chihuahuaBatteryUnrestricted() {
+        try {
+            Context context = getContext();
+            if (context == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                return true;
+            }
+            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            return pm == null || pm.isIgnoringBatteryOptimizations(context.getPackageName());
+        } catch (Throwable e) {
+            return true;
+        }
+    }
+
     private void onClick(UItem item, View view, int position, float x, float y) {
+        if (item.id == ID_BATTERY) {
+            try {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + getContext().getPackageName()));
+                getContext().startActivity(intent);
+            } catch (Throwable e) {
+                try {
+                    getContext().startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+                } catch (Throwable ignore) {
+                }
+            }
+            return;
+        }
         if (item.id == ID_NOTIF_STATUS) {
             ChihuahuaConfig.applyKeepConnected();
             if (listView != null && listView.adapter != null) {

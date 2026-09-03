@@ -515,6 +515,50 @@ QUICK_BAN_HANDLER_ANCHOR = """            case OPTION_DELETE: {
 """
 
 
+def patch_foreground_connection():
+    """Without Google push, notifications only arrive while the app's own connection is up, and
+    Telegram's "Keep-Alive Service" is a plain background Service that Android 8+ kills a minute
+    after the app leaves the screen. Turn it into a real foreground service (quiet ongoing
+    notification), start it the way Android 8+ requires, and declare it "specialUse" so Android 15's
+    six-hour daily cap on "dataSync" services does not apply."""
+    shutil.copy(HERE / "patches" / "NotificationsService.java",
+                ROOT / "TMessagesProj/src/main/java/org/telegram/messenger/NotificationsService.java")
+    print("  ok  NotificationsService.java (foreground service)")
+
+    edit("TMessagesProj/src/main/AndroidManifest.xml", [
+        ('    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />\n',
+         '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />\n'
+         '    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />\n'
+         '    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />\n', 1),
+        ('        <service\n'
+         '            android:name=".NotificationsService"\n'
+         '            android:enabled="true"\n'
+         '            android:exported="true"\n'
+         '            android:foregroundServiceType="dataSync"\n'
+         '        />\n',
+         '        <service\n'
+         '            android:name=".NotificationsService"\n'
+         '            android:enabled="true"\n'
+         '            android:exported="true"\n'
+         '            android:foregroundServiceType="specialUse">\n'
+         '            <property\n'
+         '                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"\n'
+         '                android:value="Holds the Telegram connection open so messages arrive without Google push" />\n'
+         '        </service>\n', 1),
+    ])
+
+    # Android 8+ refuses startService() from the background; a foreground service must be started as one.
+    edit("TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java", [
+        ("                applicationContext.startService(new Intent(applicationContext, NotificationsService.class));\n",
+         "                Intent chihuahuaService = new Intent(applicationContext, NotificationsService.class);\n"
+         "                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {\n"
+         "                    applicationContext.startForegroundService(chihuahuaService);\n"
+         "                } else {\n"
+         "                    applicationContext.startService(chihuahuaService);\n"
+         "                }\n", 1),
+    ])
+
+
 def patch_quick_ban():
     """One menu item on a group message that bans the sender, deletes all of their messages and
     reactions in that group and reports them to Telegram for spam. Telegram can do all four, but
@@ -747,6 +791,7 @@ def patch_theme98():
     patch_id_row()
     patch_group_age_badge()
     patch_quick_ban()
+    patch_foreground_connection()
 
 
 def patch_per_account_notifications():
