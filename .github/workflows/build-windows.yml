@@ -75,6 +75,11 @@ jobs:
           submodules: recursive
           path: ${{ env.TBUILD }}\${{ env.REPO_NAME }}
 
+      # breakpad's dump_syms (crash-report symbols, not used here) needs ATL headers the runner lacks.
+      - name: Patch the library recipe.
+        shell: bash
+        run: python desktop/patch_prepare.py "$TBUILD/$REPO_NAME"
+
       - name: First set up.
         shell: bash
         run: |

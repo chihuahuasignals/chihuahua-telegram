@@ -77,6 +77,6 @@ Keep the repository public while Windows builds are running: Windows minutes cou
 
 - `.github/workflows/build-android.yml` — the build recipe GitHub runs.
 - `customize.py` — the changes applied to Telegram's source (account limit, name, package, icon, API keys).
-- `desktop/customize_desktop.py` — the same idea for Telegram Desktop; `icons/desktop/` its icons.
+- `desktop/customize_desktop.py` — the same idea for Telegram Desktop; `icons/desktop/` its icons; `desktop/patch_prepare.py` drops the crash-report symbol tool (needs ATL) from the library recipe.
 - `config.env` — the settings above.
 - `icons/` — launcher icons.
