@@ -659,13 +659,13 @@ def patch_quick_ban():
     pa = "TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java"
     menu_item = (
         '        if (org.telegram.messenger.ChihuahuaConfig.quickBan() && chihuahuaQuickBanTarget(selectedObject) != null) {\n'
-        '            items.add("Ban everywhere, wipe & report");\n'
+        '            items.add("Ban, wipe & report");\n'
         '            options.add(OPTION_CHIHUAHUA_NUKE);\n'
         '            icons.add(R.drawable.msg_block2);\n'
-        '            items.add("Mute everywhere, wipe & report");\n'
+        '            items.add("Mute, wipe & report");\n'
         '            options.add(OPTION_CHIHUAHUA_MUTE);\n'
         '            icons.add(R.drawable.msg_mute);\n'
-        '            items.add("Wipe everywhere & report");\n'
+        '            items.add("Wipe & report");\n'
         '            options.add(OPTION_CHIHUAHUA_WIPE);\n'
         '            icons.add(R.drawable.msg_delete);\n'
         '        }\n'
