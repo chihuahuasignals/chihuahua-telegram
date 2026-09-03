@@ -4,11 +4,13 @@ Your own build of Telegram for Android with the account limit raised (32 account
 
 - **Add to Group**, **Copy ID** and **Ban from all my groups** in every user's profile menu (⋮); **Copy ID** in group/channel menus too.
 - The estimated month the account was created shown next to their online status in profiles (worked out from the ID), and the user's ID on its own row below — tap it to copy. Both switchable.
-- Long-press a message in a group you moderate for two one-item actions, instead of Telegram's separate
-  checkboxes: **Ban, wipe & report** (ban here, delete every message *and* reaction of theirs in this
-  group, report for spam) and **Mute everywhere, wipe & report** (they stay in the group but are silenced
-  — no posting, media, reactions, invites or pins — across *every* group you manage, with their messages
-  and reactions deleted in all of them).
+- Long-press a message in a group you moderate for three one-item actions, instead of Telegram's
+  separate checkboxes. All three delete every message *and* reaction of the sender and report them
+  to Telegram for spam; they differ in what else they do:
+  **Ban, wipe & report** (bans them, this group only) ·
+  **Mute everywhere, wipe & report** (silences them — no posting, media, reactions, invites or pins —
+  in *every* group you manage, without removing them) ·
+  **Wipe everywhere & report** (clean-up only, across every group you manage: no ban, no mute).
 - In group chats the sender's estimated account age next to their name (red when newer than your threshold), so throwaway spam accounts stand out without opening profiles.
 - A **Chihuahua 98** colour theme (Windows 98 palette: navy title bars, grey chrome, teal chat background), applied once on first start and listed under Settings → Chat Settings; the chat list is titled "Chihuahua".
 - **Settings → Chihuahua**: the Ban-wipe-report item, flag new accounts in groups (with the age threshold), notifications on/off per logged-in account, ghost mode (no read receipts, no typing indicator, stay offline), video calls start with the back camera, hide the Stories bar, hide Telegram Premium promotions, toggle the ID display.
