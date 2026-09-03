@@ -27,9 +27,16 @@ Repository **Settings → Secrets and variables → Actions → New repository s
 | `TG_API_HASH` | your api_hash from https://my.telegram.org |
 | `KEYSTORE_BASE64` | contents of `keystore-base64.txt` (the signing key, one long line) |
 | `KEYSTORE_PASSWORD` | contents of `keystore-password.txt` |
+| `ACTIVATION_CODE` | optional. A long passphrase; once set, every install asks for it once before it can be used. |
 
 Keep `chihuahua-release.jks` and its password somewhere safe. Lose them and future builds
 cannot update the installed app — you would have to uninstall and log in again.
+
+## Keep it private
+
+Make the repository **private** (Settings → General → Danger Zone → Change visibility) so only you can download
+the APKs; builds then take ~45 minutes instead of ~22 and use your 2,000 free Actions minutes per month.
+Add the `ACTIVATION_CODE` secret so that even a copied APK is useless without the code.
 
 ## Change something
 

@@ -2,17 +2,10 @@ name: Smoke test in emulator
 
 # Builds an x86_64 copy of the app, starts it in an Android emulator and checks that it
 # stays alive. Results (status, screenshot, crash log) are pushed to the smoke-status branch.
+# Manual only (Actions → Smoke test in emulator → Run workflow): it costs ~1 hour of runner time.
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - config.env
-      - customize.py
-      - icons/**
-      - smoke/**
-      - .github/workflows/smoke-test.yml
 
 permissions:
   contents: write
@@ -75,6 +68,7 @@ jobs:
           TG_API_ID: ${{ secrets.TG_API_ID }}
           TG_API_HASH: ${{ secrets.TG_API_HASH }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          ACTIVATION_CODE: ${{ secrets.ACTIVATION_CODE }}
         run: python3 customize.py telegram
 
       - name: Install signing key

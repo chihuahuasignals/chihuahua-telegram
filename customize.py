@@ -41,6 +41,7 @@ TG_API_ID = os.environ.get("TG_API_ID", "").strip()
 TG_API_HASH = os.environ.get("TG_API_HASH", "").strip()
 KEYSTORE_PASSWORD = os.environ.get("KEYSTORE_PASSWORD", "").strip()
 KEYSTORE_ALIAS = os.environ.get("KEYSTORE_ALIAS", "chihuahua").strip()
+ACTIVATION_CODE = os.environ.get("ACTIVATION_CODE", "").strip()
 
 DENSITIES = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
 
@@ -375,17 +376,68 @@ BAN_EVERYWHERE_HANDLER = (
 )
 
 
+ACTIVATION_GATE = (
+    "    private android.app.AlertDialog chihuahuaActivationDialog;\n"
+    "\n"
+    "    private void chihuahuaCheckActivation() {\n"
+    "        if (org.telegram.messenger.ChihuahuaConfig.isActivated()) {\n"
+    "            return;\n"
+    "        }\n"
+    "        if (chihuahuaActivationDialog != null && chihuahuaActivationDialog.isShowing()) {\n"
+    "            return;\n"
+    "        }\n"
+    "        final android.widget.EditText input = new android.widget.EditText(this);\n"
+    "        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);\n"
+    "        input.setHint(\"Activation code\");\n"
+    "        final android.widget.FrameLayout wrap = new android.widget.FrameLayout(this);\n"
+    "        wrap.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(8), AndroidUtilities.dp(20), 0);\n"
+    "        wrap.addView(input);\n"
+    "        final android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this)\n"
+    "                .setTitle(\"Chihuahua Telegram\")\n"
+    "                .setMessage(\"This is a private build. Enter the activation code to continue.\")\n"
+    "                .setView(wrap)\n"
+    "                .setCancelable(false)\n"
+    "                .setPositiveButton(\"Unlock\", null)\n"
+    "                .setNegativeButton(\"Quit\", (d, w) -> {\n"
+    "                    finishAffinity();\n"
+    "                    System.exit(0);\n"
+    "                })\n"
+    "                .create();\n"
+    "        dialog.setOnShowListener(d -> dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {\n"
+    "            if (org.telegram.messenger.ChihuahuaConfig.tryActivate(input.getText().toString())) {\n"
+    "                dialog.dismiss();\n"
+    "            } else {\n"
+    "                input.setError(\"Wrong code\");\n"
+    "            }\n"
+    "        }));\n"
+    "        chihuahuaActivationDialog = dialog;\n"
+    "        dialog.show();\n"
+    "    }\n"
+    "\n"
+)
+
+
 def patch_settings_and_toggles():
     """Settings → Chihuahua screen (new classes copied from patches/) plus the switches it controls:
     hide the Stories bar, hide Premium promotions, show IDs in profiles."""
     src = ROOT / "TMessagesProj/src/main/java/org/telegram"
+    import hashlib
+    activation_hash = hashlib.sha256(("chihuahua:" + ACTIVATION_CODE).encode("utf-8")).hexdigest() if ACTIVATION_CODE else ""
     for name, sub in (("ChihuahuaConfig.java", "messenger"), ("ChihuahuaSettingsActivity.java", "ui")):
         p = HERE / "patches" / name
         if not p.exists():
             fail(f"missing {p}")
             continue
-        shutil.copy(p, src / sub / name)
-    print("  ok  Chihuahua settings classes copied")
+        text = p.read_text(encoding="utf-8").replace("%%ACTIVATION_HASH%%", activation_hash)
+        (src / sub / name).write_text(text, encoding="utf-8")
+    print("  ok  Chihuahua settings classes copied" + (" (activation lock ON)" if activation_hash else " (no activation code set)"))
+    # Activation gate: LaunchActivity asks for the code once per device when a code is compiled in.
+    on_resume = "    @Override\n    protected void onResume() {\n        super.onResume();\n"
+    on_create = "    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n"
+    edit("TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java", [
+        (on_resume, on_resume + "        chihuahuaCheckActivation();\n", 1),
+        (on_create, ACTIVATION_GATE + on_create, 1),
+    ])
     lang_item = ("        items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, "
                  "R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));\n")
     lang_case = "            case 10:\n                presentSettingFragment(new LanguageSelectActivity());\n                break;\n"

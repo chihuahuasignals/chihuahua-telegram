@@ -8,6 +8,9 @@ import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_account;
 import org.telegram.tgnet.tl.TL_stories;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 /**
  * Chihuahua Telegram options (Settings → Chihuahua). Kept in the "chihuahua" preferences file,
  * cached in static fields so the hot paths (chat list, profile) never touch disk.
@@ -20,6 +23,10 @@ public class ChihuahuaConfig {
     public static final String KEY_GHOST_READ = "ghost_read";
     public static final String KEY_GHOST_TYPING = "ghost_typing";
     public static final String KEY_GHOST_OFFLINE = "ghost_offline";
+
+    /** SHA-256 of ("chihuahua:" + activation code), filled in at build time. Empty = no lock. */
+    public static final String ACTIVATION_HASH = "%%ACTIVATION_HASH%%";
+    public static final String KEY_ACTIVATED = "activated_" + ACTIVATION_HASH;
 
     private static volatile boolean loaded;
     private static boolean showId = true;
@@ -118,6 +125,40 @@ public class ChihuahuaConfig {
             return true;
         }
         return false;
+    }
+
+    /** True when this build has no activation code, or the code was entered on this device. */
+    public static boolean isActivated() {
+        if (ACTIVATION_HASH.isEmpty() || ApplicationLoader.applicationContext == null) {
+            return true;
+        }
+        return prefs().getBoolean(KEY_ACTIVATED, false);
+    }
+
+    public static boolean tryActivate(String code) {
+        if (code == null) {
+            return false;
+        }
+        String hash = sha256("chihuahua:" + code.trim());
+        if (!ACTIVATION_HASH.equalsIgnoreCase(hash)) {
+            return false;
+        }
+        prefs().edit().putBoolean(KEY_ACTIVATED, true).apply();
+        return true;
+    }
+
+    public static String sha256(String text) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(text.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     public static boolean get(String key) {
