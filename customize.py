@@ -578,6 +578,60 @@ def patch_theme98():
          '                ssb.setSpan(new ImageSpan(logoDrawable), 0, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);\n',
          '                SpannableStringBuilder ssb = new SpannableStringBuilder("Chihuahua");\n', 1),
     ])
+    patch_glass_header()
+
+
+GLASS_HEADER_PROVIDER = '''    // Chihuahua: the chat header pills (title, back, menu) take the action bar colour, so a theme
+    // with a coloured action bar and light title/icons stays readable. Telegram's own themes use
+    // the same colour for actionBarDefault and chat_topPanelBackground, so they look unchanged.
+    private static boolean headerIsDark(Theme.ResourcesProvider r) {
+        return org.telegram.messenger.AndroidUtilities.computePerceivedBrightness(Theme.getColor(Theme.key_actionBarDefault, r)) < .721f;
+    }
+
+    public static BlurredBackgroundProvider topPanelChatActivityHeader(Theme.ResourcesProvider resourcesProvider) {
+        return new BlurredBackgroundProviderBuilder(resourcesProvider)
+                .setBackgroundColor((r, isDark) -> {
+                    final int colorBg = Theme.getColor(Theme.key_actionBarDefault, r);
+                    if (!checkBlurEnabled(resourcesProvider)) {
+                        return ColorUtils.setAlphaComponent(colorBg, 255);
+                    }
+                    final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                    return Theme.multAlpha(colorBg, alpha);
+                })
+                .setStrokeColorTop((r, isDark) -> headerIsDark(r) ? 0x20FFFFFF : 0xFFFFFFFF)
+                .setStrokeColorBottom((r, isDark) -> headerIsDark(r) ? 0x14FFFFFF : 0xFFFFFFFF)
+                .setShadowColor((r, isDark) -> headerIsDark(r) ? 0 : 0x20000000)
+                .setStrokeWidth(dpf2(0.55f), dpf2(0.55f))
+                .build();
+    }
+
+'''
+
+
+def patch_glass_header():
+    """Telegram 12.x draws the chat screen's header as translucent "glass" pills coloured by
+    chat_topPanelBackground, while the title and icons on them use actionBarDefaultTitle/Icon.
+    That works for Telegram's themes (white bar, dark text) but a Windows 98 navy bar with white
+    text ends up as white text on a light grey pill. Make the header pills follow actionBarDefault
+    (the pinned-message panel and other top panels keep chat_topPanelBackground)."""
+    ui = "TMessagesProj/src/main/java/org/telegram/ui/"
+    tags_anchor = "    public static BlurredBackgroundProvider topPanelChatActivityTags(Theme.ResourcesProvider resourcesProvider) {\n"
+    edit(ui + "Components/blur3/drawable/color/impl/BlurredBackgroundProviderImpl.java", [
+        (tags_anchor, GLASS_HEADER_PROVIDER + tags_anchor, 1),
+    ])
+    edit(ui + "ChatActivity.java", [
+        ("            BlurredBackgroundProviderImpl.topPanelChatActivity(themeDelegate),\n            ChatObject.isForum(currentChat));\n",
+         "            BlurredBackgroundProviderImpl.topPanelChatActivityHeader(themeDelegate),\n            ChatObject.isForum(currentChat));\n", 1),
+    ])
+    edit(ui + "ChannelAdminLogActivity.java", [
+        ("actionBar.setupGlass(glassBackgroundDrawableFactory, BlurredBackgroundProviderImpl.topPanelChatActivity(resourceProvider));",
+         "actionBar.setupGlass(glassBackgroundDrawableFactory, BlurredBackgroundProviderImpl.topPanelChatActivityHeader(resourceProvider));", 1),
+    ])
+    for rel in ("community/CommunityCreateActivity.java", "community/CommunityEditActivity.java"):
+        edit(ui + rel, [
+            ("actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.topPanelChatActivity(resourceProvider));",
+             "actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.topPanelChatActivityHeader(resourceProvider));", 1),
+        ])
 
 
 def install_icons():

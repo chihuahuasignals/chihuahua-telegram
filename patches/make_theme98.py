@@ -15,6 +15,7 @@ LINK = "#0000FF"      # classic hyperlink
 GREEN = "#008000"
 TOOLTIP = "#FFFFE1"   # tooltip yellow
 LIGHT = "#E0E0E0"
+SKY = "#80D8FF"       # light text on the navy bar (online status)
 PRESSED = "#A8A8A8"
 FIELD = "#FFFFFF"
 # Windows 16-colour palette for avatars / sender names
@@ -33,6 +34,7 @@ put(WHITE, "actionBarDefaultIcon", "actionBarDefaultTitle", "actionBarDefaultSea
     "actionBarDefaultArchivedSearch", "chats_tabUnreadActiveBackground")
 put(FACE, "actionBarDefaultSubtitle", "actionBarDefaultSearchPlaceholder", "actionBarTabUnactiveText", "avatar_subtitleInProfileBlue",
     "profile_status", "chats_menuPhone", "chats_menuPhoneCats", "chats_tabUnreadUnactiveBackground", "actionBarDefaultSearchArchivedPlaceholder")
+put(SKY, "chat_status")   # "online" / "typing…" in the chat header, drawn on the navy bar
 put(NAVY2, "actionBarDefaultSelector", "actionBarTabSelector", "avatar_actionBarSelectorBlue", "actionBarDefaultArchivedSelector")
 put(FACE, "actionBarDefaultSubmenuBackground", "actionBarActionModeDefault")
 put(BLACK, "actionBarDefaultSubmenuItem", "actionBarDefaultSubmenuItemIcon", "actionBarActionModeDefaultIcon")
