@@ -442,6 +442,7 @@ GROUP_BADGE = """            if (currentUser != null && !currentMessageObject.is
 
 
 QUICK_BAN_METHODS = """    private static final int OPTION_CHIHUAHUA_NUKE = 900;
+    private static final int OPTION_CHIHUAHUA_MUTE = 901;
 
     /** The user this message came from, when this build may ban them here; null otherwise. */
     private TLRPC.User chihuahuaQuickBanTarget(MessageObject message) {
@@ -497,6 +498,91 @@ QUICK_BAN_METHODS = """    private static final int OPTION_CHIHUAHUA_NUKE = 900;
         TextView nukeButton = (TextView) nukeDialog.getButton(DialogInterface.BUTTON_POSITIVE);
         if (nukeButton != null) {
             nukeButton.setTextColor(getThemedColor(Theme.key_text_RedBold));
+        }
+    }
+
+    /** Groups where this account is an admin who can restrict members. */
+    private ArrayList<TLRPC.Chat> chihuahuaManagedGroups() {
+        final ArrayList<TLRPC.Chat> chats = new ArrayList<>();
+        for (TLRPC.Dialog dialog : getMessagesController().getAllDialogs()) {
+            if (dialog.id >= 0) {
+                continue;
+            }
+            final TLRPC.Chat chat = getMessagesController().getChat(-dialog.id);
+            if (chat == null || chat.left || chat.kicked || !ChatObject.isMegagroup(chat) || !ChatObject.canBlockUsers(chat)) {
+                continue;
+            }
+            chats.add(chat);
+        }
+        return chats;
+    }
+
+    /** Everything a muted member may no longer do: post anything, react, invite, pin, edit info. */
+    private TLRPC.TL_chatBannedRights chihuahuaMuteRights() {
+        final TLRPC.TL_chatBannedRights rights = new TLRPC.TL_chatBannedRights();
+        rights.view_messages = false;
+        rights.send_messages = true;
+        rights.send_media = true;
+        rights.send_stickers = true;
+        rights.send_gifs = true;
+        rights.send_games = true;
+        rights.send_inline = true;
+        rights.embed_links = true;
+        rights.send_polls = true;
+        rights.send_photos = true;
+        rights.send_videos = true;
+        rights.send_roundvideos = true;
+        rights.send_audios = true;
+        rights.send_voices = true;
+        rights.send_docs = true;
+        rights.send_plain = true;
+        rights.send_reactions = true;
+        rights.invite_users = true;
+        rights.change_info = true;
+        rights.pin_messages = true;
+        rights.until_date = 0;
+        return rights;
+    }
+
+    /** Mute in every group I manage, wipe their messages and reactions there, report for spam. */
+    private void chihuahuaQuickMute(MessageObject message) {
+        final TLRPC.User user = chihuahuaQuickBanTarget(message);
+        final TLRPC.Chat chat = currentChat;
+        if (user == null || chat == null || getParentActivity() == null) {
+            return;
+        }
+        final ArrayList<TLRPC.Chat> chats = chihuahuaManagedGroups();
+        if (chats.isEmpty()) {
+            return;
+        }
+        final ArrayList<Integer> reportIds = new ArrayList<>();
+        reportIds.add(message.getId());
+        final String name = UserObject.getUserName(user);
+        final String groupsWord = chats.size() == 1 ? " group" : " groups";
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), themeDelegate);
+        builder.setTitle("Mute everywhere and wipe");
+        builder.setMessage(AndroidUtilities.replaceTags("Mute **" + name + "** in " + chats.size() + groupsWord + " you manage, delete every message and reaction of theirs in them, and report them to Telegram for spam? They stay in the groups but cannot post or react."));
+        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        builder.setPositiveButton("Mute and wipe", (di, i) -> {
+            TLRPC.TL_channels_reportSpam report = new TLRPC.TL_channels_reportSpam();
+            report.channel = MessagesController.getInputChannel(chat);
+            report.participant = MessagesController.getInputPeer(user);
+            report.id = reportIds;
+            getConnectionsManager().sendRequest(report, null);
+            for (TLRPC.Chat group : chats) {
+                getMessagesController().setParticipantBannedRole(group.id, user, null, chihuahuaMuteRights(), false, ChatActivity.this);
+                getMessagesController().deleteUserChannelHistory(group, user, null, 0);
+                getMessagesController().deleteUserChannelAllReactions(group, user, null);
+            }
+            if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.ic_ban, name + " muted in " + chats.size() + groupsWord, "Messages and reactions deleted, reported for spam").show();
+            }
+        });
+        AlertDialog muteDialog = builder.create();
+        showDialog(muteDialog);
+        TextView muteButton = (TextView) muteDialog.getButton(DialogInterface.BUTTON_POSITIVE);
+        if (muteButton != null) {
+            muteButton.setTextColor(getThemedColor(Theme.key_text_RedBold));
         }
     }
 
@@ -570,6 +656,9 @@ def patch_quick_ban():
         '            items.add("Ban, wipe & report");\n'
         '            options.add(OPTION_CHIHUAHUA_NUKE);\n'
         '            icons.add(R.drawable.msg_block2);\n'
+        '            items.add("Mute everywhere, wipe & report");\n'
+        '            options.add(OPTION_CHIHUAHUA_MUTE);\n'
+        '            icons.add(R.drawable.msg_mute);\n'
         '        }\n'
     )
     edit(pa, [
@@ -583,6 +672,10 @@ def patch_quick_ban():
         (QUICK_BAN_HANDLER_ANCHOR,
          "            case OPTION_CHIHUAHUA_NUKE: {\n"
          "                chihuahuaQuickBan(selectedObject);\n"
+         "                break;\n"
+         "            }\n"
+         "            case OPTION_CHIHUAHUA_MUTE: {\n"
+         "                chihuahuaQuickMute(selectedObject);\n"
          "                break;\n"
          "            }\n" + QUICK_BAN_HANDLER_ANCHOR, 1),
     ])

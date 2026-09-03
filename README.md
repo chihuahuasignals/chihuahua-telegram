@@ -5,6 +5,9 @@ Your own build of Telegram for Android with the account limit raised (32 account
 - **Add to Group**, **Copy ID** and **Ban from all my groups** in every user's profile menu (⋮); **Copy ID** in group/channel menus too.
 - The estimated month the account was created shown next to their online status in profiles (worked out from the ID), and the user's ID on its own row below — tap it to copy. Both switchable.
 - **Ban, wipe & report** on any group message you can moderate: bans the sender, deletes every message *and* reaction of theirs in that group, and reports them to Telegram for spam — one item instead of Telegram's five separate checkboxes.
+- Long-press a message in a group you admin: **Ban, wipe & report** (ban here, delete all their messages
+  and reactions, report for spam) or **Mute everywhere, wipe & report** (same, but they stay in the group,
+  silenced across every group you manage rather than banned).
 - In group chats the sender's estimated account age next to their name (red when newer than your threshold), so throwaway spam accounts stand out without opening profiles.
 - A **Chihuahua 98** colour theme (Windows 98 palette: navy title bars, grey chrome, teal chat background), applied once on first start and listed under Settings → Chat Settings; the chat list is titled "Chihuahua".
 - **Settings → Chihuahua**: the Ban-wipe-report item, flag new accounts in groups (with the age threshold), notifications on/off per logged-in account, ghost mode (no read receipts, no typing indicator, stay offline), video calls start with the back camera, hide the Stories bar, hide Telegram Premium promotions, toggle the ID display.
