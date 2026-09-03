@@ -1,7 +1,7 @@
 # Chihuahua Telegram
 
-Your own build of Telegram for Android with the account limit raised (32 accounts instead of 3).
-Nothing else in Telegram is changed. Built on GitHub's servers from the official
+Your own build of Telegram for Android with the account limit raised (32 accounts instead of 3)
+and an **Add to group** entry in every user's profile menu (⋮), like BGram. Nothing else in Telegram is changed. Built on GitHub's servers from the official
 [DrKLO/Telegram](https://github.com/DrKLO/Telegram) source (GPL v2).
 
 ## Get the APK

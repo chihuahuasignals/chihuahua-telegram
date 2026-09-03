@@ -261,6 +261,66 @@ def patch_account_type():
     ])
 
 
+# ---------------------------------------------------------------------------------------
+# Feature: "Add to group" in a user's profile menu (like BGram). Upstream only offers it
+# for bots; this adds the same flow for people: pick one of your groups, confirm, add.
+ADD_TO_GROUP_HANDLER = (
+    "                } else if (id == chihuahua_add_to_group) {\n"
+    "                    final TLRPC.User user = getMessagesController().getUser(userId);\n"
+    "                    if (user == null) {\n"
+    "                        return;\n"
+    "                    }\n"
+    "                    Bundle args = new Bundle();\n"
+    "                    args.putBoolean(\"onlySelect\", true);\n"
+    "                    args.putInt(\"dialogsType\", DialogsActivity.DIALOGS_TYPE_ADD_USERS_TO);\n"
+    "                    args.putBoolean(\"resetDelegate\", false);\n"
+    "                    args.putBoolean(\"closeFragment\", false);\n"
+    "                    DialogsActivity fragment = new DialogsActivity(args);\n"
+    "                    fragment.setDelegate((fragment1, dids, message, param, notify, scheduleDate, scheduleRepeatPeriod, topicsFragment) -> {\n"
+    "                        long did = dids.get(0).dialogId;\n"
+    "                        TLRPC.Chat chat = getMessagesController().getChat(-did);\n"
+    "                        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), resourcesProvider);\n"
+    "                        builder.setTitle(LocaleController.getString(R.string.AddToGroup));\n"
+    "                        String chatName = chat == null ? \"\" : chat.title;\n"
+    "                        builder.setMessage(AndroidUtilities.replaceTags(formatString(\"AddMembersAlertNamesText\", R.string.AddMembersAlertNamesText, UserObject.getUserName(user), chatName)));\n"
+    "                        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);\n"
+    "                        builder.setPositiveButton(LocaleController.getString(R.string.Add), (di, i) -> {\n"
+    "                            disableProfileAnimation = true;\n"
+    "                            Bundle args1 = new Bundle();\n"
+    "                            args1.putBoolean(\"scrollToTopOnResume\", true);\n"
+    "                            args1.putLong(\"chat_id\", -did);\n"
+    "                            if (!getMessagesController().checkCanOpenChat(args1, fragment1)) {\n"
+    "                                return;\n"
+    "                            }\n"
+    "                            ChatActivity chatActivity = new ChatActivity(args1);\n"
+    "                            getNotificationCenter().removeObserver(ProfileActivity.this, NotificationCenter.closeChats);\n"
+    "                            getNotificationCenter().postNotificationName(NotificationCenter.closeChats);\n"
+    "                            getMessagesController().addUserToChat(-did, user, 0, null, chatActivity, true, null, null);\n"
+    "                            presentFragment(chatActivity, true);\n"
+    "                        });\n"
+    "                        showDialog(builder.create());\n"
+    "                        return true;\n"
+    "                    });\n"
+    "                    presentFragment(fragment);\n"
+)
+
+
+def patch_add_to_group():
+    f = "TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java"
+    menu_anchor = ("                if (!UserObject.isDeleted(user) && !isBot && currentEncryptedChat == null && !userBlocked"
+                   " && userId != 333000 && userId != 777000 && userId != 42777) {\n")
+    edit(f, [
+        ("    private final static int invite_to_group = 9;\n",
+         "    private final static int invite_to_group = 9;\n"
+         "    private final static int chihuahua_add_to_group = 90;\n", 1),
+        (menu_anchor,
+         menu_anchor +
+         "                    otherItem.addSubItem(chihuahua_add_to_group, R.drawable.msg_addbot, LocaleController.getString(R.string.AddToGroup));\n", 1),
+        ("                } else if (id == invite_to_group) {\n",
+         ADD_TO_GROUP_HANDLER + "                } else if (id == invite_to_group) {\n", 1),
+    ])
+
+
 def install_icons():
     res = ROOT / "TMessagesProj/src/main/res"
     for d in DENSITIES:
@@ -319,6 +379,7 @@ def main():
     patch_abis()
     patch_google_services()
     patch_account_type()
+    patch_add_to_group()
     install_icons()
     if errors:
         print(f"\n{len(errors)} problem(s) — the Telegram source no longer matches the anchors above.")
