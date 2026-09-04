@@ -1,0 +1,17 @@
+Customizing Telegram Desktop at D:\TBuild\tdesktop: name='Chihuahua Telegram' file=ChihuahuaTelegram accounts=32 id={712BE6B5-A262-5292-933E-A660468CBDB0}
+  ok  Telegram/SourceFiles/main/main_domain.h
+  ok  Telegram/SourceFiles/core/version.h
+  ok  Telegram/Resources/winrc/Telegram.rc
+  ok  Telegram/SourceFiles/window/main_window.cpp
+  ok  Telegram/SourceFiles/window/window_saved_windows.cpp
+  ok  Telegram/SourceFiles/window/window_restore_shell.cpp
+  ok  Telegram/SourceFiles/history/view/history_view_context_menu.cpp
+  ok  Telegram/SourceFiles/history/view/history_view_context_menu.h
+  ok  Telegram/SourceFiles/history/history_inner_widget.cpp
+  ok  Telegram/SourceFiles/chihuahua_age.h (61 anchors)
+  ok  Telegram/SourceFiles/info/profile/info_profile_actions.cpp
+  ok  Telegram/SourceFiles/history/view/history_view_message.cpp
+  ok  Telegram/SourceFiles/window/window_peer_menu.cpp
+  ok  18 icon files replaced
+
+All desktop customizations applied.

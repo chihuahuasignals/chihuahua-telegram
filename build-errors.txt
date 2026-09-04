@@ -1,0 +1,8 @@
+2:The error=dev option is deprecated.  Use -Werror=author instead.
+41:-- Performing Test HAVE_FLAG_ADDRESS_SANITIZER - Failed
+43:-- Performing Test HAVE_FLAG_SANITIZE_ADDRESS - Failed
+47:-- Performing Test COMPILER_HAS_DEPRECATED_ATTR - Failed
+53:-- Performing Test HAVE___BUILTIN_EXPECT - Failed
+55:-- Performing Test HAVE___ATTRIBUTE__ - Failed
+477:  stripe_error.cpp
+482:  smartglocal_error.cpp
