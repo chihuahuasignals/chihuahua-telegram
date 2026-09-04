@@ -207,19 +207,21 @@ void ChihuahuaAct(
 \t}));
 }
 
-void AddChihuahuaModerationActions(
+"""
+
+# The definition lives outside the anonymous namespace so that BOTH context
+# menus can call it. There are two: the ListWidget one in this file (Replies,
+# Scheduled, Saved) and HistoryInner's own, which is the one the main chat
+# window actually uses — patching only the first put these items somewhere
+# Sean would never look.
+MODERATION_EXPORTED = """void AddChihuahuaModerationActions(
 \t\tnot_null<Ui::PopupMenu*> menu,
-\t\tconst ContextMenuRequest &request,
-\t\tnot_null<ListWidget*> list) {
-\tif (!request.selectedItems.empty()) {
-\t\treturn;
-\t}
-\tconst auto item = request.item;
+\t\tnot_null<Window::SessionController*> controller,
+\t\tFullMsgId itemId) {
+\tconst auto item = controller->session().data().message(itemId);
 \tif (!ChihuahuaTarget(item)) {
 \t\treturn;
 \t}
-\tconst auto controller = list->controller();
-\tconst auto itemId = item->fullId();
 \tconst auto add = [&](
 \t\t\tconst QString &text,
 \t\t\tChihuahuaMode mode,
@@ -235,7 +237,16 @@ void AddChihuahuaModerationActions(
 
 """
 
+INNER_MENU = "Telegram/SourceFiles/history/history_inner_widget.cpp"
+
+INNER_CALL = """\t\t\tHistoryView::AddChihuahuaModerationActions(
+\t\t\t\t_menu,
+\t\t\t\t_controller,
+\t\t\t\titemId);
+"""
+
 CONTEXT_MENU = "Telegram/SourceFiles/history/view/history_view_context_menu.cpp"
+CONTEXT_MENU_HEADER = "Telegram/SourceFiles/history/view/history_view_context_menu.h"
 PROFILE_ACTIONS = "Telegram/SourceFiles/info/profile/info_profile_actions.cpp"
 
 
@@ -465,8 +476,12 @@ def patch_admins():
         ('\tvoid addManageChat();\n',
          '\tvoid addManageChat();\n\tvoid addChihuahuaAdmins();\n', 1),
         ('void Filler::addBoostChat() {\n', ADMINS_CODE + 'void Filler::addBoostChat() {\n', 1),
+        # The profile page's menu...
         ('\taddManageChat();\n\taddSetPersonalChannel();\n',
          '\taddManageChat();\n\taddChihuahuaAdmins();\n\taddSetPersonalChannel();\n', 1),
+        # ...and the open chat's own menu, which is where you actually look.
+        ('\taddManageChat();\n\taddStoryArchive();\n',
+         '\taddManageChat();\n\taddChihuahuaAdmins();\n\taddStoryArchive();\n', 1),
     ])
 
 
@@ -489,14 +504,42 @@ def patch_moderation():
     edit(CONTEXT_MENU, [
         # Headers the ported code needs that the file does not already pull in.
         ('#include "api/api_report.h"\n', MODERATION_INCLUDES, 1),
-        # The code itself, in the file's own anonymous namespace.
+        # Helpers, in the file's own anonymous namespace.
         ('void AddReportAction(\n\t\tnot_null<Ui::PopupMenu*> menu,',
          MODERATION_CODE + 'void AddReportAction(\n\t\tnot_null<Ui::PopupMenu*> menu,', 1),
-        # Show the items right under Telegram's own Delete entry.
+        # The entry point, just outside that namespace so both menus can call it.
+        ('} // namespace\n\nstd::optional<QString> CurrentVoiceTimecode(FullMsgId itemId) {',
+         '} // namespace\n\n' + MODERATION_EXPORTED
+         + 'std::optional<QString> CurrentVoiceTimecode(FullMsgId itemId) {', 1),
+        # Menu 1 of 2: the ListWidget menu (Replies, Scheduled, Saved).
         ('\tAddDeleteAction(menu, request, list);\n\tAddDownloadFilesAction(menu, request, list);\n',
          '\tAddDeleteAction(menu, request, list);\n'
-         '\tAddChihuahuaModerationActions(menu, request, list);\n'
+         '\tif (request.selectedItems.empty() && request.item) {\n'
+         '\t\tAddChihuahuaModerationActions(\n'
+         '\t\t\tmenu,\n'
+         '\t\t\tlist->controller(),\n'
+         '\t\t\trequest.item->fullId());\n'
+         '\t}\n'
          '\tAddDownloadFilesAction(menu, request, list);\n', 1),
+    ])
+    edit(CONTEXT_MENU_HEADER, [
+        ('void InsertPollHiddenResultsLabel(not_null<Ui::PopupMenu*> menu);',
+         'void AddChihuahuaModerationActions(\n'
+         '\tnot_null<Ui::PopupMenu*> menu,\n'
+         '\tnot_null<Window::SessionController*> controller,\n'
+         '\tFullMsgId itemId);\n\n'
+         'void InsertPollHiddenResultsLabel(not_null<Ui::PopupMenu*> menu);', 1),
+    ])
+    # Menu 2 of 2: HistoryInner's own menu — the main chat window. It has two
+    # branches (single message, and album/grouped), each ending with the
+    # block-sender item; the items go after both.
+    edit(INNER_MENU, [
+        ('\t\t\t\t\tblockSenderItem(itemId);\n\t\t\t\t}, &st::menuIconBlock);\n\t\t\t}\n',
+         '\t\t\t\t\tblockSenderItem(itemId);\n\t\t\t\t}, &st::menuIconBlock);\n\t\t\t}\n'
+         + INNER_CALL, 1),
+        ('\t\t\t\t\tblockSenderAsGroup(itemId);\n\t\t\t\t}, &st::menuIconBlock);\n\t\t\t}\n',
+         '\t\t\t\t\tblockSenderAsGroup(itemId);\n\t\t\t\t}, &st::menuIconBlock);\n\t\t\t}\n'
+         + INNER_CALL, 1),
     ])
 
 
