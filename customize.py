@@ -979,15 +979,21 @@ GLASS_HEADER_PROVIDER = '''    // Chihuahua: the chat header pills (title, back,
 
 
 def patch_action_mode_background():
-    """Make the select-mode bar paint itself even in Telegram 12.x's "glass" mode.
+    """Give the select-mode bar a real, opaque background so white icons stay readable.
 
-    ActionBar.createActionMode() skips setBackgroundColor entirely when glassMode is on, so the
-    bar has no background at all and whatever is behind it shows through. Telegram's own themes
-    get away with it because their action-mode icons are dark and the screen behind is light; here
-    the icons are white, so on the chat list (a light glass header) they vanish completely. In the
-    chat screen the bar is not in glass mode, which is why select mode looked right there and
-    wrong in the chat list."""
+    Two things conspire here. createActionMode() skips the background entirely when glassMode is
+    on. And on screens that call actionBar.setDrawBlurBackground() — the chat list, contacts, call
+    log, statistics, topics — the action mode's setBackgroundColor() is overridden to merely RECORD
+    the colour, which dispatchDraw() then paints as a blur scrim at the alpha of chat_BlurAlpha.
+    Over a white chat list that dilutes navy to near-white, and this theme's white icons disappear.
+    ChatActivity never blurs its action bar, which is why select mode looked right inside a chat
+    and wrong in the chat list.
+
+    setBackground() is not intercepted, so a plain ColorDrawable actually sticks — on every screen,
+    blurred or not."""
     edit("TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java", [
+        ("import android.graphics.drawable.BitmapDrawable;\n",
+         "import android.graphics.drawable.BitmapDrawable;\nimport android.graphics.drawable.ColorDrawable;\n", 1),
         ("        actionMode.isActionMode = true;\n"
          "        actionMode.setClickable(true);\n"
          "        if (!glassMode) {\n"
@@ -995,8 +1001,10 @@ def patch_action_mode_background():
          "        }\n",
          "        actionMode.isActionMode = true;\n"
          "        actionMode.setClickable(true);\n"
-         "        // Chihuahua: always paint it, glass or not, so white icons stay readable.\n"
-         "        actionMode.setBackgroundColor(getThemedColor(Theme.key_actionBarActionModeDefault));\n", 1),
+         "        // Chihuahua: setBackgroundColor() is intercepted on blurred action bars and only\n"
+         "        // records a colour that is later painted at the theme's blur alpha, i.e. washed\n"
+         "        // out by whatever is behind. setBackground() is not intercepted.\n"
+         "        actionMode.setBackground(new ColorDrawable(getThemedColor(Theme.key_actionBarActionModeDefault)));\n", 1),
     ])
 
 
