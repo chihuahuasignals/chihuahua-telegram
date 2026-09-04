@@ -896,6 +896,7 @@ def patch_theme98():
          '                SpannableStringBuilder ssb = new SpannableStringBuilder("Chihuahua");\n', 1),
     ])
     patch_glass_header()
+    patch_action_mode_background()
     patch_profile_header()
     patch_per_account_notifications()
     patch_id_row()
@@ -975,6 +976,28 @@ GLASS_HEADER_PROVIDER = '''    // Chihuahua: the chat header pills (title, back,
     }
 
 '''
+
+
+def patch_action_mode_background():
+    """Make the select-mode bar paint itself even in Telegram 12.x's "glass" mode.
+
+    ActionBar.createActionMode() skips setBackgroundColor entirely when glassMode is on, so the
+    bar has no background at all and whatever is behind it shows through. Telegram's own themes
+    get away with it because their action-mode icons are dark and the screen behind is light; here
+    the icons are white, so on the chat list (a light glass header) they vanish completely. In the
+    chat screen the bar is not in glass mode, which is why select mode looked right there and
+    wrong in the chat list."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java", [
+        ("        actionMode.isActionMode = true;\n"
+         "        actionMode.setClickable(true);\n"
+         "        if (!glassMode) {\n"
+         "            actionMode.setBackgroundColor(getThemedColor(Theme.key_actionBarActionModeDefault));\n"
+         "        }\n",
+         "        actionMode.isActionMode = true;\n"
+         "        actionMode.setClickable(true);\n"
+         "        // Chihuahua: always paint it, glass or not, so white icons stay readable.\n"
+         "        actionMode.setBackgroundColor(getThemedColor(Theme.key_actionBarActionModeDefault));\n", 1),
+    ])
 
 
 def patch_glass_header():
