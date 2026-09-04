@@ -896,7 +896,7 @@ def patch_theme98():
          '                SpannableStringBuilder ssb = new SpannableStringBuilder("Chihuahua");\n', 1),
     ])
     patch_glass_header()
-    patch_action_mode_background()
+    patch_action_mode_icons()
     patch_profile_header()
     patch_per_account_notifications()
     patch_id_row()
@@ -978,33 +978,21 @@ GLASS_HEADER_PROVIDER = '''    // Chihuahua: the chat header pills (title, back,
 '''
 
 
-def patch_action_mode_background():
-    """Give the select-mode bar a real, opaque background so white icons stay readable.
+def patch_action_mode_icons():
+    """Dark icons on the chat list's select-mode bar, because that bar cannot be painted.
 
-    Two things conspire here. createActionMode() skips the background entirely when glassMode is
-    on. And on screens that call actionBar.setDrawBlurBackground() — the chat list, contacts, call
-    log, statistics, topics — the action mode's setBackgroundColor() is overridden to merely RECORD
-    the colour, which dispatchDraw() then paints as a blur scrim at the alpha of chat_BlurAlpha.
-    Over a white chat list that dilutes navy to near-white, and this theme's white icons disappear.
-    ChatActivity never blurs its action bar, which is why select mode looked right inside a chat
-    and wrong in the chat list.
+    The chat list calls actionBar.setDrawBlurBackground(), which hands the bar's background over to
+    the blur system: setBackgroundColor() on the action mode is then overridden to merely RECORD a
+    colour, repainted later as a blur scrim at the alpha of chat_BlurAlpha, and setBackground() is
+    overwritten by the blur pass too. Two builds spent trying to force it navy proved that. So the
+    bar stays as Telegram intends — a light glass panel over the chat list — and the icons on it go
+    dark, which is exactly how Telegram's own light themes read.
 
-    setBackground() is not intercepted, so a plain ColorDrawable actually sticks — on every screen,
-    blurred or not."""
-    edit("TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java", [
-        ("import android.graphics.drawable.BitmapDrawable;\n",
-         "import android.graphics.drawable.BitmapDrawable;\nimport android.graphics.drawable.ColorDrawable;\n", 1),
-        ("        actionMode.isActionMode = true;\n"
-         "        actionMode.setClickable(true);\n"
-         "        if (!glassMode) {\n"
-         "            actionMode.setBackgroundColor(getThemedColor(Theme.key_actionBarActionModeDefault));\n"
-         "        }\n",
-         "        actionMode.isActionMode = true;\n"
-         "        actionMode.setClickable(true);\n"
-         "        // Chihuahua: setBackgroundColor() is intercepted on blurred action bars and only\n"
-         "        // records a colour that is later painted at the theme's blur alpha, i.e. washed\n"
-         "        // out by whatever is behind. setBackground() is not intercepted.\n"
-         "        actionMode.setBackground(new ColorDrawable(getThemedColor(Theme.key_actionBarActionModeDefault)));\n", 1),
+    Only DialogsActivity is changed. ChatActivity never blurs its action bar, so its select-mode bar
+    really is navy and keeps the white icons."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java", [
+        ("Theme.key_actionBarActionModeDefaultIcon",
+         "Theme.key_windowBackgroundWhiteBlackText", 11),
     ])
 
 
