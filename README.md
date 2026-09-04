@@ -97,9 +97,13 @@ message's right-click menu — **Ban, wipe & report**, **Mute, wipe & report**, 
 each covering every group you manage, exactly as on the phone. It also shows two extra rows in a
 user's profile: **ID** (right-click → Copy ID) and **Account created** (the month estimated from
 that ID). Both apps read the same anchor table out of `patches/ChihuahuaConfig.java`, so their
-estimates cannot drift apart. **Admins** is in a group or channel's ⋮ menu here too. The Android app
-is Java and the desktop app is C++/Qt, so nothing ports across: every feature is written twice.
-Still only on Android: the red age badge on group senders, and Settings → Chihuahua. Two Android features have no desktop equivalent and never will — the
+estimates cannot drift apart (`customize_desktop.py` generates `Telegram/SourceFiles/chihuahua_age.h`
+from it). In group chats a sender under three months old gets ` · new` or ` · 2mo` after their name —
+plain, not red, and shown only for new accounts, so the badge appearing at all is the warning.
+**Admins** is in a group or channel's ⋮ menu here too. The Android app is Java and the desktop app is
+C++/Qt, so nothing ports across: every feature is written twice. Still only on Android:
+Settings → Chihuahua, so on desktop the age threshold is fixed at three months and every feature is
+always on. Two Android features have no desktop equivalent and never will — the
 back-camera default (no camera) and the notification keep-alive service (a desktop app holds its
 own connection). `desktop/theme/ChihuahuaTelegram98.tdesktop-theme` is the Windows 98 palette for desktop —
 in the app: Settings → Chat Settings → Choose theme → **Load from file**. Regenerate it with
