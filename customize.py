@@ -429,8 +429,14 @@ ACTIVATION_GATE = (
 )
 
 
+# The same row serves user and group profiles. Groups show the ID the way bots
+# and the Telegram API want it: -100<id> for supergroups and channels, -<id>
+# for basic groups — the same text the old menu item copied.
 ID_ROW_BIND = """                    } else if (position == chihuahuaIdRow) {
-                        detailCell.setTextAndValue(String.valueOf(userId), "ID \\u00b7 tap to copy", true);
+                        final String chihuahuaId = userId != 0
+                                ? String.valueOf(userId)
+                                : (ChatObject.isChannel(currentChat) ? "-100" : "-") + chatId;
+                        detailCell.setTextAndValue(chihuahuaId, "ID \\u00b7 tap to copy", true);
 """
 
 
@@ -726,16 +732,32 @@ def patch_id_row():
         # contents
         ("                    } else if (position == phoneRow) {\n                        String text;\n",
          ID_ROW_BIND + "                    } else if (position == phoneRow) {\n                        String text;\n", 1),
-        # tap copies the ID and names the estimated creation month
+        # tap copies the ID; for a user it also names the estimated creation month
         ("            listView.stopScroll();\n            if (position == affiliateRow) {\n",
          "            listView.stopScroll();\n"
          "            if (position == chihuahuaIdRow) {\n"
-         "                AndroidUtilities.addToClipboard(String.valueOf(userId));\n"
+         "                final String chihuahuaId = userId != 0\n"
+         "                        ? String.valueOf(userId)\n"
+         "                        : (ChatObject.isChannel(currentChat) ? \"-100\" : \"-\") + chatId;\n"
+         "                AndroidUtilities.addToClipboard(chihuahuaId);\n"
          "                if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {\n"
-         "                    String chihuahuaCreated = org.telegram.messenger.ChihuahuaConfig.estimatedCreation(userId);\n"
-         "                    BulletinFactory.of(ProfileActivity.this).createCopyBulletin(\"ID \" + userId + \" copied\" + (chihuahuaCreated.isEmpty() ? \"\" : \" \\u00b7 account created about \" + chihuahuaCreated)).show();\n"
+         "                    String chihuahuaCreated = userId != 0 ? org.telegram.messenger.ChihuahuaConfig.estimatedCreation(userId) : \"\";\n"
+         "                    BulletinFactory.of(ProfileActivity.this).createCopyBulletin(\"ID \" + chihuahuaId + \" copied\" + (chihuahuaCreated.isEmpty() ? \"\" : \" \\u00b7 account created about \" + chihuahuaCreated)).show();\n"
          "                }\n"
          "            } else if (position == affiliateRow) {\n", 1),
+        # --- the same row in group and channel profiles, after the invite link ---
+        # the info card must exist even for a private group with no description
+        ("            if (chatInfo != null && (!TextUtils.isEmpty(chatInfo.about) || chatInfo.location instanceof TLRPC.TL_channelLocation) || ChatObject.isPublic(currentChat)) {\n",
+         "            if (org.telegram.messenger.ChihuahuaConfig.showIdInProfile() || chatInfo != null && (!TextUtils.isEmpty(chatInfo.about) || chatInfo.location instanceof TLRPC.TL_channelLocation) || ChatObject.isPublic(currentChat)) {\n", 1),
+        ("                if (ChatObject.isPublic(currentChat)) {\n                    usernameRow = rowCount++;\n                }\n            }\n",
+         "                if (ChatObject.isPublic(currentChat)) {\n                    usernameRow = rowCount++;\n                }\n"
+         "                if (org.telegram.messenger.ChihuahuaConfig.showIdInProfile()) {\n"
+         "                    chihuahuaIdRow = rowCount++;\n"
+         "                }\n"
+         "            }\n", 1),
+        # the invite-link cell now has a row under it in group profiles, so give it a divider there
+        ("detailCell.setTextAndValue(text, alsoUsernamesString(username, usernames, value), infoEndRowEmpty == -1 && (isTopic || bizHoursRow != -1 || bizLocationRow != -1) && birthdayRow < 0);",
+         "detailCell.setTextAndValue(text, alsoUsernamesString(username, usernames, value), infoEndRowEmpty == -1 && (isTopic || bizHoursRow != -1 || bizLocationRow != -1) && birthdayRow < 0 || chatId != 0 && chihuahuaIdRow != -1);", 1),
         # the phone row now has a row under it, so give it a divider
         ("detailCell.setTextAndValue(text, LocaleController.getString(isFragmentPhoneNumber ? R.string.AnonymousNumber : R.string.PhoneMobile), false);",
          "detailCell.setTextAndValue(text, LocaleController.getString(isFragmentPhoneNumber ? R.string.AnonymousNumber : R.string.PhoneMobile), chihuahuaIdRow != -1);", 1),
@@ -838,10 +860,11 @@ def patch_add_to_group():
          "                if (!isBot && !UserObject.isDeleted(user) && !UserObject.isUserSelf(user)) {\n"
          "                    otherItem.addSubItem(chihuahua_ban_everywhere, R.drawable.msg_block2, \"Ban from all my groups\").setColors(getThemedColor(Theme.key_text_RedRegular), getThemedColor(Theme.key_text_RedRegular));\n"
          "                }\n" + CONTACT_SHORTCUT_ANCHOR, 1),
-        # "Copy ID" in a group/channel profile menu
+        # "Admins" in a group/channel profile menu. (Copy ID used to live here too; the group's
+        # ID is now a tap-to-copy row in the profile itself, like a user's.)
         (CHAT_MENU_ANCHOR,
-         CHAT_MENU_ANCHOR + "            otherItem.addSubItem(chihuahua_copy_id, R.drawable.msg_copy, \"Copy ID\");\n"
-         "            if (chat != null && ChatObject.isChannel(chat)) {\n"
+         CHAT_MENU_ANCHOR
+         + "            if (chat != null && ChatObject.isChannel(chat)) {\n"
          "                otherItem.addSubItem(chihuahua_admins, R.drawable.msg_admins, \"Admins\");\n"
          "            }\n", 1),
         # user ID next to the online status under the name (toggle in Settings → Chihuahua)
