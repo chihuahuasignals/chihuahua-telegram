@@ -532,70 +532,108 @@ QUICK_BAN_METHODS = """    private static final int CHIHUAHUA_WIPE_ONLY = 0;
     }
 
     /**
-     * Clears a sender out of every group this account manages: their messages and reactions are
-     * deleted in all of them and they are reported to Telegram for spam. {@code mode} decides what
-     * else happens to them -- nothing, muted in those groups, or banned from them.
+     * Clears a sender out of every group this account manages. In each group, in this order:
+     * find their messages (messages.search by sender, up to 100), report those to Telegram for
+     * spam (channels.reportSpam -- the same call Telegram's own "Report spam" tick makes), and only
+     * then delete every message of theirs (channels.deleteParticipantHistory, paged until done) and
+     * every reaction (messages.deleteParticipantReactions). Report before delete, because a report
+     * names message ids and they must still exist. Then, by {@code mode}: nothing, mute, or ban.
+     *
+     * Wipe runs the moment it is tapped. Mute and ban still ask first.
      */
     private void chihuahuaWipeEverywhere(MessageObject message, int mode) {
         final TLRPC.User user = chihuahuaQuickBanTarget(message);
         final TLRPC.Chat chat = currentChat;
-        if (user == null || chat == null || getParentActivity() == null) {
+        if (user == null || chat == null) {
             return;
         }
         final ArrayList<TLRPC.Chat> chats = chihuahuaManagedGroups();
         if (chats.isEmpty()) {
             return;
         }
-        final ArrayList<Integer> reportIds = new ArrayList<>();
-        reportIds.add(message.getId());
+        final int knownId = message.getId();
         final String name = UserObject.getUserName(user);
         final String where = chats.size() + (chats.size() == 1 ? " group" : " groups") + " you manage";
-        final String title, question, confirm, done;
+        final Runnable run = () -> {
+            for (TLRPC.Chat group : chats) {
+                chihuahuaWipeInGroup(group, user, mode, group.id == chat.id ? knownId : 0);
+            }
+            if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                final String done = mode == CHIHUAHUA_WIPE_BAN ? name + " banned from " + where
+                        : mode == CHIHUAHUA_WIPE_MUTE ? name + " muted in " + where
+                        : name + " wiped from " + where;
+                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.ic_ban, done, "Reporting, then deleting every message and reaction of theirs").show();
+            }
+        };
+        if (mode == CHIHUAHUA_WIPE_ONLY) {
+            run.run();
+            return;
+        }
+        if (getParentActivity() == null) {
+            return;
+        }
+        final String title, question, confirm;
         if (mode == CHIHUAHUA_WIPE_BAN) {
             title = "Ban everywhere and wipe";
             question = "Ban **" + name + "** from " + where + ", delete every message and reaction of theirs in them, and report them to Telegram for spam? They are removed and cannot rejoin.";
             confirm = "Ban and wipe";
-            done = name + " banned from " + where;
-        } else if (mode == CHIHUAHUA_WIPE_MUTE) {
+        } else {
             title = "Mute everywhere and wipe";
             question = "Mute **" + name + "** in " + where + ", delete every message and reaction of theirs in them, and report them to Telegram for spam? They stay in the groups but cannot post or react.";
             confirm = "Mute and wipe";
-            done = name + " muted in " + where;
-        } else {
-            title = "Wipe everywhere";
-            question = "Delete every message and reaction of **" + name + "** in " + where + " and report them to Telegram for spam? They are not muted or removed, so they can post again.";
-            confirm = "Wipe";
-            done = name + " wiped from " + where;
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), themeDelegate);
         builder.setTitle(title);
         builder.setMessage(AndroidUtilities.replaceTags(question));
         builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-        builder.setPositiveButton(confirm, (di, i) -> {
-            TLRPC.TL_channels_reportSpam report = new TLRPC.TL_channels_reportSpam();
-            report.channel = MessagesController.getInputChannel(chat);
-            report.participant = MessagesController.getInputPeer(user);
-            report.id = reportIds;
-            getConnectionsManager().sendRequest(report, null);
-            for (TLRPC.Chat group : chats) {
-                getMessagesController().deleteUserChannelHistory(group, user, null, 0);
-                getMessagesController().deleteUserChannelAllReactions(group, user, null);
-                if (mode == CHIHUAHUA_WIPE_MUTE) {
-                    getMessagesController().setParticipantBannedRole(group.id, user, null, chihuahuaMuteRights(), false, ChatActivity.this);
-                } else if (mode == CHIHUAHUA_WIPE_BAN) {
-                    getMessagesController().deleteParticipantFromChat(group.id, user, group, false, false);
-                }
-            }
-            if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
-                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.ic_ban, done, "Messages and reactions deleted, reported for spam").show();
-            }
-        });
+        builder.setPositiveButton(confirm, (di, i) -> run.run());
         AlertDialog wipeDialog = builder.create();
         showDialog(wipeDialog);
         TextView wipeButton = (TextView) wipeDialog.getButton(DialogInterface.BUTTON_POSITIVE);
         if (wipeButton != null) {
             wipeButton.setTextColor(getThemedColor(Theme.key_text_RedBold));
         }
+    }
+
+    /** One group: search their messages -> report them -> delete history and reactions -> mute/ban. */
+    private void chihuahuaWipeInGroup(TLRPC.Chat group, TLRPC.User user, int mode, int knownMessageId) {
+        final Runnable wipe = () -> {
+            getMessagesController().deleteUserChannelHistory(group, user, null, 0);
+            getMessagesController().deleteUserChannelAllReactions(group, user, null);
+            if (mode == CHIHUAHUA_WIPE_MUTE) {
+                getMessagesController().setParticipantBannedRole(group.id, user, null, chihuahuaMuteRights(), false, ChatActivity.this);
+            } else if (mode == CHIHUAHUA_WIPE_BAN) {
+                getMessagesController().deleteParticipantFromChat(group.id, user, group, false, false);
+            }
+        };
+        final TLRPC.TL_messages_search search = new TLRPC.TL_messages_search();
+        search.peer = MessagesController.getInputPeer(group);
+        search.q = "";
+        search.from_id = MessagesController.getInputPeer(user);
+        search.flags |= 1;
+        search.filter = new TLRPC.TL_inputMessagesFilterEmpty();
+        search.limit = 100;
+        getConnectionsManager().sendRequest(search, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+            final ArrayList<Integer> ids = new ArrayList<>();
+            if (response instanceof TLRPC.messages_Messages) {
+                for (TLRPC.Message m : ((TLRPC.messages_Messages) response).messages) {
+                    ids.add(m.id);
+                }
+            }
+            if (knownMessageId > 0 && !ids.contains(knownMessageId)) {
+                ids.add(knownMessageId);
+            }
+            if (ids.isEmpty()) {
+                wipe.run();
+                return;
+            }
+            final TLRPC.TL_channels_reportSpam report = new TLRPC.TL_channels_reportSpam();
+            report.channel = MessagesController.getInputChannel(group);
+            report.participant = MessagesController.getInputPeer(user);
+            report.id = ids;
+            // Delete only once the report has been answered, so the ids it names still exist.
+            getConnectionsManager().sendRequest(report, (r, e) -> AndroidUtilities.runOnUIThread(wipe));
+        }));
     }
 
 """
