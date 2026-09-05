@@ -1,0 +1,250 @@
+R.raw.story_bomb1 — fps=60, frames=44, mono=false
+R.raw.story_bomb2 — fps=60, frames=51, mono=false
+R.raw.story_repost — fps=60, frames=36, mono=false
+R.raw.sun — fps=60, frames=36, mono=false
+R.raw.sun_outline — fps=60, frames=36, mono=false
+R.raw.swipe_community_ungroup — fps=60, frames=29, mono=false
+R.raw.swipe_delete — fps=60, frames=38, mono=false
+R.raw.swipe_disabled — fps=60, frames=30, mono=false
+R.raw.swipe_mute — fps=60, frames=35, mono=false
+R.raw.swipe_pin — fps=60, frames=31, mono=false
+R.raw.swipe_read — fps=60, frames=35, mono=false
+R.raw.swipe_unmute — fps=60, frames=35, mono=false
+R.raw.swipe_unpin — fps=60, frames=48, mono=false
+R.raw.swipe_unread — fps=60, frames=36, mono=false
+R.raw.tab_article — fps=60, frames=16, mono=false
+R.raw.tab_article_reverse — fps=60, frames=5, mono=false
+R.raw.tab_calls — fps=60, frames=6, mono=false
+R.raw.tab_chats — fps=60, frames=6, mono=false
+R.raw.tab_checklist — fps=60, frames=17, mono=false
+R.raw.tab_checklist_reverse — fps=60, frames=5, mono=false
+R.raw.tab_colors — fps=60, frames=17, mono=false
+R.raw.tab_colors_reverse — fps=60, frames=5, mono=false
+R.raw.tab_contacts — fps=60, frames=6, mono=false
+R.raw.tab_emoji — fps=60, frames=18, mono=false
+R.raw.tab_emoji_reverse — fps=60, frames=5, mono=false
+R.raw.tab_files — fps=60, frames=17, mono=false
+R.raw.tab_files_reverse — fps=60, frames=5, mono=false
+R.raw.tab_gallery — fps=60, frames=17, mono=false
+R.raw.tab_gallery_reverse — fps=60, frames=5, mono=false
+R.raw.tab_gift — fps=60, frames=17, mono=false
+R.raw.tab_gift_reverse — fps=60, frames=5, mono=false
+R.raw.tab_location — fps=60, frames=17, mono=false
+R.raw.tab_location_reverse — fps=60, frames=5, mono=false
+R.raw.tab_models — fps=60, frames=17, mono=false
+R.raw.tab_models_reverse — fps=60, frames=5, mono=false
+R.raw.tab_music — fps=60, frames=17, mono=false
+R.raw.tab_music_reverse — fps=60, frames=5, mono=false
+R.raw.tab_poll — fps=60, frames=17, mono=false
+R.raw.tab_poll_reverse — fps=60, frames=5, mono=false
+R.raw.tab_reply — fps=60, frames=17, mono=false
+R.raw.tab_reply_reverse — fps=60, frames=5, mono=false
+R.raw.tab_settings — fps=60, frames=6, mono=false
+R.raw.tab_sticker — fps=60, frames=17, mono=false
+R.raw.tab_sticker_reverse — fps=60, frames=5, mono=false
+R.raw.tab_symbols — fps=60, frames=17, mono=false
+R.raw.tab_symbols_reverse — fps=60, frames=5, mono=false
+R.raw.tab_wallet — fps=60, frames=17, mono=false
+R.raw.tab_wallet_reverse — fps=60, frames=5, mono=false
+R.raw.tag_icon_3 — fps=60, frames=57, mono=false
+R.raw.ticks_double — fps=60, frames=54, mono=false
+R.raw.ticks_single — fps=60, frames=25, mono=false
+R.raw.timer_3 — fps=60, frames=66, mono=false
+R.raw.timer_toast — fps=60, frames=41, mono=false
+R.raw.topics — fps=60, frames=180, mono=false
+R.raw.topics_list — fps=60, frames=100, mono=false
+R.raw.topics_tabs — fps=60, frames=100, mono=false
+R.raw.topics_top — fps=60, frames=157, mono=false
+R.raw.transcribe — fps=60, frames=180, mono=false
+R.raw.transcribe_in — fps=60, frames=20, mono=false
+R.raw.transcribe_out — fps=60, frames=20, mono=false
+R.raw.tsv_monkey_close — fps=60, frames=98, mono=false
+R.raw.tsv_setup_email_sent — fps=60, frames=180, mono=false
+R.raw.tsv_setup_hint — fps=60, frames=180, mono=false
+R.raw.tsv_setup_intro — fps=60, frames=180, mono=false
+R.raw.tsv_setup_mail — fps=60, frames=160, mono=false
+R.raw.tsv_setup_monkey_close_and_peek — fps=60, frames=33, mono=false
+R.raw.tsv_setup_monkey_close_and_peek_to_idle — fps=60, frames=33, mono=false
+R.raw.tsv_setup_monkey_idle1 — fps=60, frames=30, mono=false
+R.raw.tsv_setup_monkey_idle2 — fps=60, frames=30, mono=false
+R.raw.tsv_setup_monkey_peek — fps=60, frames=33, mono=false
+R.raw.tsv_setup_monkey_tracking — fps=60, frames=180, mono=false
+R.raw.ubuntu_30 — fps=60, frames=180, mono=false
+R.raw.unlock_icon — fps=60, frames=120, mono=false
+R.raw.utyan_cache — fps=60, frames=180, mono=false
+R.raw.utyan_call — fps=60, frames=180, mono=false
+R.raw.utyan_change_number — fps=60, frames=180, mono=false
+R.raw.utyan_draw — fps=60, frames=180, mono=false
+R.raw.utyan_empty — fps=60, frames=180, mono=false
+R.raw.utyan_empty2 — fps=60, frames=180, mono=false
+R.raw.utyan_gallery — fps=60, frames=180, mono=false
+R.raw.utyan_gigagroup — fps=60, frames=150, mono=false
+R.raw.utyan_newborn — fps=60, frames=180, mono=false
+R.raw.utyan_passcode — fps=60, frames=180, mono=false
+R.raw.utyan_private — fps=60, frames=180, mono=false
+R.raw.utyan_saved_messages — fps=60, frames=180, mono=false
+R.raw.utyan_schedule — fps=60, frames=180, mono=false
+R.raw.utyan_streaming — fps=60, frames=180, mono=false
+R.raw.video_stop — fps=60, frames=60, mono=false
+R.raw.voice_and_video — fps=60, frames=60, mono=false
+R.raw.voice_mini — fps=60, frames=172, mono=false
+R.raw.voice_muted — fps=60, frames=29, mono=false
+R.raw.voice_outlined — fps=60, frames=24, mono=false
+R.raw.voice_outlined2 — fps=60, frames=84, mono=false
+R.raw.voice_to_text — fps=60, frames=120, mono=false
+R.raw.voip_allow_talk — fps=60, frames=52, mono=false
+R.raw.voip_filled — fps=60, frames=404, mono=false
+R.raw.voip_invite — fps=60, frames=120, mono=false
+R.raw.voip_muted — fps=60, frames=120, mono=false
+R.raw.voip_record_saved — fps=60, frames=56, mono=false
+R.raw.voip_record_start — fps=60, frames=64, mono=false
+R.raw.voip_unmuted — fps=60, frames=120, mono=false
+R.raw.wallet_allset — fps=60, frames=180, mono=false
+R.raw.wallet_congrats — fps=60, frames=180, mono=false
+R.raw.wallet_perfect — fps=60, frames=120, mono=false
+R.raw.wallet_science — fps=60, frames=180, mono=false
+R.raw.windows_30 — fps=60, frames=180, mono=false
+R.raw.write_contacts_fab_icon — fps=60, frames=49, mono=false
+
+> Task :TMessagesProj:generateReleaseResources
+> Task :TMessagesProj:mergeReleaseNativeLibs
+> Task :TMessagesProj_App:mergeAfatReleaseArtProfile
+> Task :TMessagesProj:packageReleaseResources
+> Task :TMessagesProj:javaPreCompileRelease
+> Task :TMessagesProj:extractProguardFiles
+
+> Task :TMessagesProj:processReleaseManifest
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/src/main/AndroidManifest.xml:85:5-102 Warning:
+	uses-permission#android.permission.WRITE_EXTERNAL_STORAGE was tagged at AndroidManifest.xml:85 to replace another declaration but no other declaration present
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/src/main/AndroidManifest.xml:99:5-706:19 Warning:
+	application@android:supportsRtl was tagged at AndroidManifest.xml:99 to replace other declarations but no other declaration present
+
+> Task :TMessagesProj:generateReleaseLibraryProguardRules
+> Task :TMessagesProj:parseReleaseLocalResources
+> Task :TMessagesProj:copyReleaseJniLibsProjectOnly
+> Task :TMessagesProj:processReleaseJavaRes NO-SOURCE
+> Task :TMessagesProj:mergeReleaseJavaResource
+> Task :TMessagesProj:writeReleaseAarMetadata
+> Task :TMessagesProj:extractDeepLinksRelease
+> Task :TMessagesProj:mergeReleaseShaders
+> Task :TMessagesProj:compileReleaseShaders NO-SOURCE
+> Task :TMessagesProj:generateReleaseAssets UP-TO-DATE
+> Task :TMessagesProj:generateReleaseRFile
+> Task :TMessagesProj:mergeReleaseAssets
+> Task :TMessagesProj_App:expandAfatReleaseL8ArtProfileWildcards
+> Task :TMessagesProj_App:checkAfatReleaseAarMetadata
+> Task :TMessagesProj_App:mergeAfatReleaseNativeLibs
+> Task :TMessagesProj_App:mapAfatReleaseSourceSetPaths
+> Task :TMessagesProj_App:stripAfatReleaseDebugSymbols
+
+> Task :TMessagesProj_App:mergeAfatReleaseResources
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4356:4: Multiple substitutions specified in non-positional format of string resource string/Gift2ActiveAuctionsActiveBidActive. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4359:4: Multiple substitutions specified in non-positional format of string resource string/Gift2ActiveAuctionsActiveRound. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4408:4: Multiple substitutions specified in non-positional format of string resource string/Gift2AuctionInfo2_one. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4409:4: Multiple substitutions specified in non-positional format of string resource string/Gift2AuctionInfo2_other. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4412:4: Multiple substitutions specified in non-positional format of string resource string/Gift2AuctionInfoLearnMore2_one. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4413:4: Multiple substitutions specified in non-positional format of string resource string/Gift2AuctionInfoLearnMore2_other. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4414:4: Multiple substitutions specified in non-positional format of string resource string/Gift2AuctionInfo_one. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4415:4: Multiple substitutions specified in non-positional format of string resource string/Gift2AuctionInfo_other. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4460:4: Multiple substitutions specified in non-positional format of string resource string/Gift2AuctionsChangeRecipient2. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4470:4: Multiple substitutions specified in non-positional format of string resource string/Gift2AveragePriceHint. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4588:4: Multiple substitutions specified in non-positional format of string resource string/Gift2InfoOutConverted_one. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4589:4: Multiple substitutions specified in non-positional format of string resource string/Gift2InfoOutConverted_other. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4862:4: Multiple substitutions specified in non-positional format of string resource string/GiftAuctionInfo1Text_one. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4863:4: Multiple substitutions specified in non-positional format of string resource string/GiftAuctionInfo1Text_other. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:4969:4: Multiple substitutions specified in non-positional format of string resource string/GiftOfferPayMulti. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:6590:4: Multiple substitutions specified in non-positional format of string resource string/NotificationTopicExceptionsDesctription_one. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:6591:4: Multiple substitutions specified in non-positional format of string resource string/NotificationTopicExceptionsDesctription_other. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9134:4: Multiple substitutions specified in non-positional format of string resource string/StarRatingDescription1. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9135:4: Multiple substitutions specified in non-positional format of string resource string/StarRatingDescription2. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9136:4: Multiple substitutions specified in non-positional format of string resource string/StarRatingDescription3. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9547:4: Multiple substitutions specified in non-positional format of string resource string/StoryAddedToAlbumTitle_one. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9548:4: Multiple substitutions specified in non-positional format of string resource string/StoryAddedToAlbumTitle_other. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9750:4: Multiple substitutions specified in non-positional format of string resource string/StoryRemovedFromAlbumTitle_one. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9751:4: Multiple substitutions specified in non-positional format of string resource string/StoryRemovedFromAlbumTitle_other. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9822:4: Multiple substitutions specified in non-positional format of string resource string/SuggestAPostBelowSubtitleStarsAndTime. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9876:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedAdmin1. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9877:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedAdmin1PastSimple. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9879:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedAdmin2. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9880:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedAdmin3Stars. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9881:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedAdmin3TON. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9882:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedAdmin4Stars. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9883:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedAdmin4TON. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9884:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedUser1. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9885:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedUser1PastSimple. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9888:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedUser3Stars. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9889:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedUser3TON. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9890:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedUser4Stars. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:9891:4: Multiple substitutions specified in non-positional format of string resource string/SuggestionAgreementReachedUser4TON. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:10324:4: Multiple substitutions specified in non-positional format of string resource string/UnconfirmedAuthMultipleFrom_one. Did you mean to add the formatted="false" attribute?
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/build/intermediates/packaged_res/release/packageReleaseResources/values/values.xml:10325:4: Multiple substitutions specified in non-positional format of string resource string/UnconfirmedAuthMultipleFrom_other. Did you mean to add the formatted="false" attribute?
+
+> Task :TMessagesProj:compileReleaseLibraryResources
+
+> Task :TMessagesProj_App:processAfatReleaseMainManifest
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/config/release/AndroidManifest_SDK23.xml Warning:
+	uses-permission#android.permission.WRITE_EXTERNAL_STORAGE was tagged at AndroidManifest_SDK23.xml:0 to replace another declaration but no other declaration present
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/config/release/AndroidManifest_SDK23.xml:56:9-64:20 Warning:
+	receiver#com.google.android.gms.measurement.AppMeasurementReceiver@android:enabled was tagged at AndroidManifest_SDK23.xml:56 to replace other declarations but no other declaration present
+/home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/TMessagesProj/config/release/AndroidManifest_SDK23.xml:66:9-70:40 Warning:
+	service#com.google.android.gms.measurement.AppMeasurementService@android:enabled was tagged at AndroidManifest_SDK23.xml:66 to replace other declarations but no other declaration present
+
+> Task :TMessagesProj_App:processAfatReleaseManifest
+> Task :TMessagesProj_App:extractAfatReleaseNativeDebugMetadata
+> Task :TMessagesProj_App:processAfatReleaseManifestForPackage
+> Task :TMessagesProj_App:mergeAfatReleaseJavaResource
+> Task :TMessagesProj_App:mergeAfatReleaseAssets
+> Task :TMessagesProj_App:compressAfatReleaseAssets
+> Task :TMessagesProj_App:mergeAfatReleaseNativeDebugMetadata
+> Task :TMessagesProj:compileReleaseJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :TMessagesProj:mergeReleaseGeneratedProguardFiles
+> Task :TMessagesProj:exportReleaseConsumerProguardFiles
+> Task :TMessagesProj:bundleLibCompileToJarRelease
+warn: removing resource com.chihuahua.messenger:string/AddManyMembersAlertNamesText_few without required default value.
+warn: removing resource com.chihuahua.messenger:string/AddManyMembersAlertNamesText_two without required default value.
+warn: removing resource com.chihuahua.messenger:string/AddManyMembersAlertTitle_few without required default value.
+warn: removing resource com.chihuahua.messenger:string/AddManyMembersAlertTitle_many without required default value.
+warn: removing resource com.chihuahua.messenger:string/AddManyMembersAlertTitle_two without required default value.
+warn: removing resource com.chihuahua.messenger:string/EmailPasswordConfirmText3 without required default value.
+warn: removing resource com.chihuahua.messenger:string/Languages_few without required default value.
+warn: removing resource com.chihuahua.messenger:string/Languages_many without required default value.
+warn: removing resource com.chihuahua.messenger:string/Languages_two without required default value.
+warn: removing resource com.chihuahua.messenger:string/Languages_zero without required default value.
+warn: removing resource com.chihuahua.messenger:string/NoContactsYet without required default value.
+warn: removing resource com.chihuahua.messenger:string/NoContactsYetLine1 without required default value.
+warn: removing resource com.chihuahua.messenger:string/NoContactsYetLine2 without required default value.
+warn: removing resource com.chihuahua.messenger:string/NoContactsYetLine3 without required default value.
+warn: removing resource com.chihuahua.messenger:string/PleaseEnterFirstPassword without required default value.
+warn: removing resource com.chihuahua.messenger:string/PleaseEnterPassword without required default value.
+warn: removing resource com.chihuahua.messenger:string/ResetAccountButton without required default value.
+warn: removing resource com.chihuahua.messenger:string/ResetMyAccountText without required default value.
+warn: removing resource com.chihuahua.messenger:string/ShareTelegram without required default value.
+warn: removing resource com.chihuahua.messenger:string/WidgetPasscodeEnable2 without required default value.
+warn: removing resource com.chihuahua.messenger:string/YourEmailCode without required default value.
+warn: removing resource com.chihuahua.messenger:string/YourEmailCodeInfo without required default value.
+warn: removing resource com.chihuahua.messenger:string/YourPasswordSuccessText without required default value.
+warn: removing resource com.chihuahua.messenger:string/formatterMonthName without required default value.
+warn: removing resource com.chihuahua.messenger:string/formatterMonthYear2 without required default value.
+
+> Task :TMessagesProj_App:processAfatReleaseResources
+> Task :TMessagesProj_App:compileAfatReleaseJavaWithJavac
+> Task :TMessagesProj_App:mergeAfatReleaseGeneratedProguardFiles
+> Task :TMessagesProj_App:optimizeAfatReleaseResources
+> Task :TMessagesProj:minifyReleaseWithR8
+> Task :TMessagesProj:bundleLibRuntimeToJarRelease
+> Task :TMessagesProj_App:expandAfatReleaseArtProfileWildcards
+> Task :TMessagesProj_App:minifyAfatReleaseWithR8
+> Task :TMessagesProj_App:l8DexDesugarLibAfatRelease
+> Task :TMessagesProj_App:compileAfatReleaseArtProfile
+> Task :TMessagesProj_App:packageAfatRelease
+> Task :TMessagesProj_App:createAfatReleaseApkListingFileRedirect
+> Task :TMessagesProj_App:assembleAfatRelease
+[Incubating] Problems report is available at: file:///home/runner/work/chihuahua-telegram/chihuahua-telegram/telegram/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 17m 27s
+99 actionable tasks: 99 executed
