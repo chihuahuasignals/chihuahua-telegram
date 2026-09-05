@@ -919,6 +919,7 @@ def patch_theme98():
          '                SpannableStringBuilder ssb = new SpannableStringBuilder("Chihuahua");\n', 1),
     ])
     patch_glass_header()
+    patch_dialogs_header_icons()
     patch_action_mode_icons()
     patch_profile_header()
     patch_per_account_notifications()
@@ -999,6 +1000,36 @@ GLASS_HEADER_PROVIDER = '''    // Chihuahua: the chat header pills (title, back,
     }
 
 '''
+
+
+def patch_dialogs_header_icons():
+    """Dark search / menu icons on the chat list's header.
+
+    With the 12.x bottom tabs (hasMainTabs) the chat list's header is a light glass panel and
+    Telegram colours its TITLE with key_telegram_color_dialogsLogo (which falls back to
+    windowBackgroundWhiteBlackText — black here). The search and menu icons, though, still take
+    key_actionBarDefaultIcon, which this theme makes white for the navy chat-screen header. So:
+    black title, invisible white icons. Make the icons follow exactly the rule the title follows,
+    at every place the colour is set, and give the search field dark text while we are here."""
+    da = "TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java"
+    icon_key = "hasMainTabs ? Theme.key_telegram_color_dialogsLogo : Theme.key_actionBarDefaultIcon"
+    edit(da, [
+        # initial colour
+        ("        actionBar.setItemsColor(getThemedColor(Theme.key_actionBarDefaultIcon), false);\n",
+         "        actionBar.setItemsColor(getThemedColor(" + icon_key + "), false);\n", 1),
+        # re-applied during the search open/close animation
+        ("            int color1 = (folderId != 0 || communityId != 0) ? getThemedColor(Theme.key_actionBarDefaultArchivedIcon) : getThemedColor(Theme.key_actionBarDefaultIcon);\n",
+         "            int color1 = (folderId != 0 || communityId != 0) ? getThemedColor(Theme.key_actionBarDefaultArchivedIcon) : getThemedColor(" + icon_key + ");\n", 1),
+        # re-applied on theme changes
+        ("            arrayList.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_ITEMSCOLOR, null, null, null, cellDelegate, Theme.key_actionBarDefaultIcon));\n",
+         "            arrayList.add(new ThemeDescription(actionBar, ThemeDescription.FLAG_AB_ITEMSCOLOR, null, null, null, cellDelegate, " + icon_key + "));\n", 1),
+        # typed search text and its placeholder, on the same light header
+        ("            actionBar.setTitleColor(getThemedColor(Theme.key_telegram_color_dialogsLogo));\n        }\n",
+         "            actionBar.setTitleColor(getThemedColor(Theme.key_telegram_color_dialogsLogo));\n"
+         "            actionBar.setSearchTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText), false);\n"
+         "            actionBar.setSearchTextColor(getThemedColor(Theme.key_windowBackgroundWhiteGrayText), true);\n"
+         "        }\n", 1),
+    ])
 
 
 def patch_action_mode_icons():
