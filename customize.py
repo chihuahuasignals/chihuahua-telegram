@@ -976,6 +976,7 @@ def patch_theme98():
     patch_id_row()
     patch_profile_action_buttons()
     patch_adaptive_header_text()
+    patch_hint_contrast()
     patch_admin_bio()
     patch_add_account_button()
     patch_sync_contacts_off()
@@ -1418,6 +1419,40 @@ def patch_account_order():
          "                    return false;\n"
          "                });\n"
          "                return cell;\n", 1),
+    ])
+
+
+def patch_hint_contrast():
+    """Tooltip bubbles (HintView2: "Tap on 📷 to post a story…", the stories Premium hints) hardcode
+    white text and a white close button, assuming their default dark bubble. Three of them paint
+    undo_background instead — tooltip yellow in this theme — so the text vanished (Sean's screenshot,
+    2026-09-06). setBgColor() now picks the ink from the bubble's brightness: black on a light
+    bubble, white on a dark one. Bubbles that keep the default dark background are unaffected."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/Stories/recorder/HintView2.java", [
+        ("    public HintView2 setBgColor(int color) {\n"
+         "        if (backgroundPaint.getColor() != color) {\n"
+         "            backgroundPaint.setColor(color);\n"
+         "            invalidate();\n"
+         "        }\n"
+         "        return this;\n"
+         "    }\n",
+         "    private int chihuahuaCloseColor = 0x7dffffff;\n\n"
+         "    public HintView2 setBgColor(int color) {\n"
+         "        if (backgroundPaint.getColor() != color) {\n"
+         "            backgroundPaint.setColor(color);\n"
+         "            // Chihuahua: dark ink on a light bubble (this theme's tooltip yellow), white on a dark one.\n"
+         "            final boolean light = AndroidUtilities.computePerceivedBrightness(color) > 0.72f;\n"
+         "            setTextColor(light ? 0xff000000 : 0xffffffff);\n"
+         "            chihuahuaCloseColor = light ? 0x7d000000 : 0x7dffffff;\n"
+         "            if (closeButtonDrawable != null) {\n"
+         "                closeButtonDrawable.setColorFilter(new PorterDuffColorFilter(chihuahuaCloseColor, PorterDuff.Mode.MULTIPLY));\n"
+         "            }\n"
+         "            invalidate();\n"
+         "        }\n"
+         "        return this;\n"
+         "    }\n", 1),
+        ("                closeButtonDrawable.setColorFilter(new PorterDuffColorFilter(0x7dffffff, PorterDuff.Mode.MULTIPLY));\n",
+         "                closeButtonDrawable.setColorFilter(new PorterDuffColorFilter(chihuahuaCloseColor, PorterDuff.Mode.MULTIPLY));\n", 2),
     ])
 
 
