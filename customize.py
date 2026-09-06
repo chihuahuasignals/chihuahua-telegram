@@ -978,6 +978,7 @@ def patch_theme98():
     patch_adaptive_header_text()
     patch_admin_bio()
     patch_add_account_button()
+    patch_sync_contacts_off()
     patch_group_age_badge()
     patch_quick_ban()
     patch_foreground_connection()
@@ -1290,6 +1291,18 @@ def patch_add_account_button():
          "                break;\n"
          "            }\n"
          "            case 1:\n                presentSettingFragment(new UserInfoActivity());\n                break;\n", 1),
+    ])
+
+
+def patch_sync_contacts_off():
+    """"Sync Contacts" starts unchecked on the login screen (both the field's default and the value
+    used when the screen is restored without a saved choice). Every add-account path goes through
+    LoginActivity, so this covers all of them; the box can still be ticked by hand."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java", [
+        ("    private boolean syncContacts = true;\n",
+         "    private boolean syncContacts = false; // Chihuahua: off unless ticked\n", 1),
+        ('            syncContacts = savedInstanceState.getInt("syncContacts", 1) == 1;\n',
+         '            syncContacts = savedInstanceState.getInt("syncContacts", 0) == 1;\n', 1),
     ])
 
 

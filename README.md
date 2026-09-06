@@ -7,6 +7,7 @@ Your own build of Telegram for Android with the account limit raised (32 account
 - The estimated month the account was created shown next to their online status in profiles (worked out from the ID), and the user's ID on its own row below — tap it to copy. Both switchable.
 - Group and channel profiles get the same ID row, under the invite link, in the form bots and the API use (`-100…` for supergroups and channels, `-…` for basic groups). Tap to copy.
 - **Add Account** at the bottom of the Accounts card on the Settings tab, just above Account.
+- **Sync Contacts** is unticked by default when adding an account (tick it yourself if you want it).
 - The Administrators list shows one line of each admin's bio where Telegram shows "Promoted by …" (admins without a bio keep that text).
 - The button row on a group profile is **Message · Mute · Admins · Recent Actions** (Telegram's Video Chat, Add Story and Leave are gone; Leave is still in the ⋮ menu). On a channel it is **Mute · Invite Links · Recent Actions** (no Live Stream or Add Story). Admin buttons only appear where you have the rights.
 - Long-press a message in a group you moderate for three one-item actions, instead of Telegram's
