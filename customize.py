@@ -974,6 +974,7 @@ def patch_theme98():
     patch_profile_header()
     patch_per_account_notifications()
     patch_id_row()
+    patch_profile_action_buttons()
     patch_group_age_badge()
     patch_quick_ban()
     patch_foreground_connection()
@@ -1079,6 +1080,96 @@ def patch_dialogs_header_icons():
          "            actionBar.setSearchTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText), false);\n"
          "            actionBar.setSearchTextColor(getThemedColor(Theme.key_windowBackgroundWhiteGrayText), true);\n"
          "        }\n", 1),
+    ])
+
+
+def patch_profile_action_buttons():
+    """Admin tools on the profile button row, in place of the calls-and-stories buttons.
+
+    Groups:   Message · Mute · Admins · Recent Actions      (was: Message · Mute · Video Chat · Add Story · Leave)
+    Channels: Mute · Invite Links · Recent Actions          (was: Live Stream · Mute · Add Story)
+    Discuss / Gift / Share / Join / Report keep Telegram's own rules. Leave is still in the ⋮ menu.
+    The three new buttons follow the same machinery as Telegram's (key -> enum -> availability ->
+    per-mode list -> click), and are only offered when the account has the matching rights."""
+    pav = "TMessagesProj/src/main/java/org/telegram/ui/Components/ProfileActionsView.java"
+    pa = "TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java"
+    edit("TMessagesProj/src/main/res/values/strings.xml", [
+        ('<string name="AppName">Telegram</string>',
+         '<string name="AppName">Telegram</string>\n'
+         '    <string name="ChihuahuaAdmins">Admins</string>\n'
+         '    <string name="ChihuahuaRecentActions">Recent Actions</string>\n'
+         '    <string name="ChihuahuaInviteLinks">Invite Links</string>', 1),
+    ])
+    edit(pav, [
+        # keys
+        ("    public static final int KEY_SETTINGS = 17;\n",
+         "    public static final int KEY_SETTINGS = 17;\n"
+         "    public static final int KEY_ADMINS = 18;\n"
+         "    public static final int KEY_RECENT_ACTIONS = 19;\n"
+         "    public static final int KEY_INVITE_LINKS = 20;\n", 1),
+        # icon + label
+        ("        SETTINGS(R.string.Settings, R.drawable.filled_profile_settings, R.drawable.outline_profile_settings),;\n",
+         "        SETTINGS(R.string.Settings, R.drawable.filled_profile_settings, R.drawable.outline_profile_settings),\n"
+         "        ADMINS(R.string.ChihuahuaAdmins, R.drawable.msg_admins, R.drawable.msg_admins),\n"
+         "        RECENT_ACTIONS(R.string.ChihuahuaRecentActions, R.drawable.msg_log, R.drawable.msg_log),\n"
+         "        INVITE_LINKS(R.string.ChihuahuaInviteLinks, R.drawable.msg_link2, R.drawable.msg_link2),;\n", 1),
+        # construction
+        ("            case KEY_NOTIFICATION:\n                newAction = new Action();\n",
+         "            case KEY_ADMINS:\n                newAction = new Action(ActionButton.ADMINS);\n                break;\n"
+         "            case KEY_RECENT_ACTIONS:\n                newAction = new Action(ActionButton.RECENT_ACTIONS);\n                break;\n"
+         "            case KEY_INVITE_LINKS:\n                newAction = new Action(ActionButton.INVITE_LINKS);\n                break;\n"
+         "            case KEY_NOTIFICATION:\n                newAction = new Action();\n", 1),
+        # channel row: drop Live Stream...
+        ("                } else {\n                    insertIfAvailable(out, KEY_VOICE_CHAT);\n                    insertIfNotAvailable(out, KEY_STREAM, KEY_VOICE_CHAT);\n                }\n                insertIfAvailable(out, KEY_NOTIFICATION);\n",
+         "                }\n                insertIfAvailable(out, KEY_NOTIFICATION);\n", 1),
+        # ...and Add Story, in favour of Invite Links + Recent Actions
+        ("                } else {\n                    insertIfAvailable(out, KEY_STORY);\n                    insertIfNotAvailable(out, KEY_LEAVE, KEY_STORY);\n                }\n                break;\n",
+         "                } else {\n"
+         "                    // Chihuahua: admin tools instead of Add Story.\n"
+         "                    insertIfAvailable(out, KEY_INVITE_LINKS);\n"
+         "                    insertIfAvailable(out, KEY_RECENT_ACTIONS);\n"
+         "                    insertIfNotAvailable(out, KEY_LEAVE, KEY_STORY);\n"
+         "                }\n                break;\n", 1),
+        # group row: Admins + Recent Actions instead of Video Chat / Add Story / Leave
+        ("                } else {\n                    insertIfAvailable(out, KEY_VOICE_CHAT);\n                    insertIfNotAvailable(out, KEY_STREAM, KEY_VOICE_CHAT);\n                    insertIfAvailable(out, KEY_STORY);\n                    insertIfAvailable(out, KEY_LEAVE);\n                }\n                break;\n",
+         "                } else {\n"
+         "                    // Chihuahua: admin tools instead of Video Chat / Add Story / Leave (Leave stays in the menu).\n"
+         "                    insertIfAvailable(out, KEY_ADMINS);\n"
+         "                    insertIfAvailable(out, KEY_RECENT_ACTIONS);\n"
+         "                }\n                break;\n", 1),
+    ])
+    edit(pa, [
+        # availability, by rights
+        ("            actionsView.set(ProfileActionsView.KEY_STREAM, streamAction);\n",
+         "            actionsView.set(ProfileActionsView.KEY_STREAM, streamAction);\n"
+         "            actionsView.set(ProfileActionsView.KEY_ADMINS, currentChat != null && ChatObject.isChannel(currentChat) && !ChatObject.isLeftFromChat(currentChat) && !ChatObject.isKickedFromChat(currentChat));\n"
+         "            actionsView.set(ProfileActionsView.KEY_RECENT_ACTIONS, currentChat != null && ChatObject.isChannel(currentChat) && ChatObject.hasAdminRights(currentChat));\n"
+         "            actionsView.set(ProfileActionsView.KEY_INVITE_LINKS, currentChat != null && ChatObject.isChannel(currentChat) && ChatObject.canUserDoAdminAction(currentChat, ChatObject.ACTION_INVITE));\n", 1),
+        # clicks: the same screens Telegram opens from Manage Group
+        ("                    case ProfileActionsView.KEY_LEAVE:\n                        leaveChatPressed(false);\n                        break;\n",
+         "                    case ProfileActionsView.KEY_ADMINS: {\n"
+         "                        Bundle chihuahuaArgs = new Bundle();\n"
+         "                        chihuahuaArgs.putLong(\"chat_id\", chatId);\n"
+         "                        chihuahuaArgs.putInt(\"type\", ChatUsersActivity.TYPE_ADMIN);\n"
+         "                        ChatUsersActivity chihuahuaAdmins = new ChatUsersActivity(chihuahuaArgs);\n"
+         "                        chihuahuaAdmins.setInfo(chatInfo);\n"
+         "                        presentFragment(chihuahuaAdmins);\n"
+         "                        break;\n"
+         "                    }\n"
+         "                    case ProfileActionsView.KEY_RECENT_ACTIONS:\n"
+         "                        if (currentChat != null) {\n"
+         "                            presentFragment(new ChannelAdminLogActivity(currentChat));\n"
+         "                        }\n"
+         "                        break;\n"
+         "                    case ProfileActionsView.KEY_INVITE_LINKS: {\n"
+         "                        ManageLinksActivity chihuahuaLinks = new ManageLinksActivity(chatId, 0, 0);\n"
+         "                        if (chatInfo != null) {\n"
+         "                            chihuahuaLinks.setInfo(chatInfo, chatInfo.exported_invite);\n"
+         "                        }\n"
+         "                        presentFragment(chihuahuaLinks);\n"
+         "                        break;\n"
+         "                    }\n"
+         "                    case ProfileActionsView.KEY_LEAVE:\n                        leaveChatPressed(false);\n                        break;\n", 1),
     ])
 
 
