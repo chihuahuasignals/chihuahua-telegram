@@ -905,11 +905,23 @@ def patch_add_to_group():
          + "            if (chat != null && ChatObject.isChannel(chat)) {\n"
          "                otherItem.addSubItem(chihuahua_admins, R.drawable.msg_admins, \"Admins\");\n"
          "            }\n", 1),
-        # user ID next to the online status under the name (toggle in Settings → Chihuahua)
+        # estimated creation month next to the online status under the name (toggle in Settings → Chihuahua)
         (STATUS_ANCHOR,
          STATUS_ANCHOR +
          "                if (org.telegram.messenger.ChihuahuaConfig.showIdInProfile()) {\n"
          "                    newString2 = newString2 + org.telegram.messenger.ChihuahuaConfig.accountAgeSuffix(user.id);\n"
+         "                }\n", 1),
+        # ...and on your own profile, whose status ("online") is built on a separate branch
+        ("                    } else {\n"
+         "                        newString2 = LocaleController.getString(R.string.Online);\n"
+         "                    }\n"
+         "                }\n",
+         "                    } else {\n"
+         "                        newString2 = LocaleController.getString(R.string.Online);\n"
+         "                    }\n"
+         "                    if (org.telegram.messenger.ChihuahuaConfig.showIdInProfile()) {\n"
+         "                        newString2 = newString2 + org.telegram.messenger.ChihuahuaConfig.accountAgeSuffix(user.id);\n"
+         "                    }\n"
          "                }\n", 1),
     ])
 
