@@ -1,18 +1,18 @@
-"""Desktop (Telegram Desktop) icon set: round icons like the official ones.
-Usage: python3 make_desktop_icons.py [variant] [outdir]   → icons/desktop/"""
-import os, sys
-from PIL import Image, ImageDraw
-from chihuahua_icon import composed
+"""Desktop (Telegram Desktop) icon set: round icons like the official ones, from the v3 design.
+Usage: python3 make_desktop_icons.py [outdir]   → icons/desktop/"""
+import os
+import sys
 
-variant = sys.argv[1] if len(sys.argv) > 1 else "sunset"
-outdir = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "desktop")
+from PIL import Image, ImageDraw
+
+import make_icons_v3 as v3
+
+outdir = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "desktop")
 os.makedirs(outdir, exist_ok=True)
 
 BIG = 1024
-base = composed(BIG, variant)                       # square, full bleed
-circle_mask = Image.new("L", (BIG, BIG), 0)
-ImageDraw.Draw(circle_mask).ellipse([0, 0, BIG - 1, BIG - 1], fill=255)
-round_full = Image.new("RGBA", (BIG, BIG), (0, 0, 0, 0)); round_full.paste(base, (0, 0), circle_mask)
+# the launcher's visible 72 dp of the 108 dp canvas, masked round — what the phone shows too
+round_full = v3.masked(v3.crop_visible(v3.composed(2048)), "circle").resize((BIG, BIG), Image.LANCZOS)
 
 
 def with_margin(size, margin_frac=0.04):
@@ -39,7 +39,7 @@ ico_src.save(f"{outdir}/icon256.ico", format="ICO", sizes=[(16, 16), (24, 24), (
 pv = Image.new("RGB", (256 * 3 + 40, 256), (235, 235, 235))
 pv.paste(with_margin(256).convert("RGBA"), (0, 0), with_margin(256))
 pv.paste(round_full.resize((256, 256)).convert("RGBA"), (276, 0), round_full.resize((256, 256)))
-pv.paste(with_margin(64).resize((64, 64)).convert("RGBA"), (552, 96), with_margin(64))
+pv.paste(with_margin(64).convert("RGBA"), (552, 96), with_margin(64))
 pv.paste(with_margin(32).convert("RGBA"), (640, 112), with_margin(32))
 pv.save(f"{outdir}/preview.png")
-print(variant, "->", outdir, len(os.listdir(outdir)), "files")
+print("desktop v3 ->", outdir, len(os.listdir(outdir)), "files")

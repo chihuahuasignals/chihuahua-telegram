@@ -67,7 +67,7 @@ Edit `config.env` on GitHub (pencil icon), commit, and a new build starts automa
 - `TELEGRAM_COMMIT` — which Telegram version to build. To update to a newer Telegram, put the newest
   commit id from https://github.com/DrKLO/Telegram/commits/master here. If Telegram moved things
   around, the build fails with a clear "anchor found 0x" message in `customize.py` — that needs a small fix.
-- `icons/` — the launcher icon PNGs (sticker of the real chihuahua). `icons/source/make_icons_v2.py sunset|ocean|candy` regenerates them; `sticker_v2.py` rebuilds the sticker from the background-removed photo.
+- `icons/` — the launcher icon: the real chihuahua inside a chat bubble on the theme's navy-to-blue. `icons/source/make_icons_v3.py` regenerates the Android set from `cutout_u2net.png` (the background-removed photo) and `make_desktop_icons.py` the Windows set; the older sunset-sticker design is still there as `make_icons_v2.py`.
 
 You can also press **Actions → Build Android APK → Run workflow** to rebuild without changing anything.
 
