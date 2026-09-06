@@ -115,11 +115,8 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
                 items.add(UItem.asButton(ID_BATTERY, "Stop Android sleeping the app"));
             }
             items.add(UItem.asShadow(ChihuahuaConfig.notificationStatus() + "\n\nThis build cannot use Google push (that needs a Firebase project of Telegram's), so notifications come from Telegram's own background connection. Telegram only applies its Keep-Alive switch to the first account and its Background Connection switch to one account at a time \u2014 this turns both on for every account, every start. Android also has to be told not to sleep the app: hold the icon \u2192 App info \u2192 Battery \u2192 no restrictions, and on Xiaomi/Redmi also turn on Autostart."));
-            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            for (int a : ChihuahuaConfig.accountsInOrder()) {
                 UserConfig config = UserConfig.getInstance(a);
-                if (!config.isClientActivated()) {
-                    continue;
-                }
                 TLRPC.User user = config.getCurrentUser();
                 String name = user == null ? ("Account " + (a + 1)) : UserObject.getUserName(user);
                 String subtext = ChihuahuaConfig.notificationsEnabled(a) ? "On" : "Off";
@@ -127,11 +124,11 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
                 if (username != null && !username.isEmpty()) {
                     subtext = subtext + " \u00b7 @" + username;
                 } else if (user != null && user.phone != null && !user.phone.isEmpty()) {
-                    subtext = subtext + " \u00b7 +" + user.phone;
+                    subtext = subtext + " \u00b7 " + ChihuahuaConfig.phoneWithFlag(user);
                 }
                 items.add(UItem.asButtonCheck(ID_NOTIFY_BASE + a, name, subtext).setChecked(ChihuahuaConfig.notificationsEnabled(a)));
             }
-            items.add(UItem.asShadow("Switch an account off and it posts no notifications, makes no sound and is left out of the badge count \u2014 the other accounts keep notifying. Messages still arrive; you just see them when you open that account."));
+            items.add(UItem.asShadow("Only the first account you log in starts switched on; every account added after it starts off. Switch an account off and it posts no notifications, makes no sound and is left out of the badge count \u2014 the other accounts keep notifying. Messages still arrive; you just see them when you open that account."));
         }
 
         items.add(UItem.asHeader("Chat list"));

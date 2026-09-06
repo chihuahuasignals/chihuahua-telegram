@@ -412,30 +412,99 @@ public class ChihuahuaConfig {
     // accounts logged in you usually want a handful noisy and the rest silent, so every account
     // gets its own switch (Settings -> Chihuahua -> Notifications). Silenced accounts post no
     // notification, make no sound, and are left out of the launcher badge count.
-    private static final java.util.concurrent.ConcurrentHashMap<Integer, Boolean> notifyByAccount = new java.util.concurrent.ConcurrentHashMap<>();
+    //
+    // Default: the first account logged in notifies; every account added after it starts silent.
+    // The choice is kept per user ID rather than per slot, so an account that logs out does not
+    // hand its setting to whoever logs into that slot next. Accounts that were already logged in
+    // when this build first ran keep exactly what they had (their old slot setting, else on).
+    private static final java.util.concurrent.ConcurrentHashMap<Long, Boolean> notifyByUser = new java.util.concurrent.ConcurrentHashMap<>();
+    private static volatile boolean notifyMigrated;
 
-    private static String notifyKey(int account) {
+    private static String notifyKey(long userId) {
+        return "notify_user_" + userId;
+    }
+
+    private static String legacyNotifyKey(int account) {
         return "notify_account_" + account;
     }
 
-    /** False when this account's notifications were switched off in Settings -> Chihuahua. */
+    /**
+     * Once per install, and only after every slot's config has been read: give each account that
+     * is logged in right now an explicit value, so the "new accounts start silent" default can
+     * only ever apply to logins made after this build. False while it is too early to know who
+     * is logged in (the start-up loop reads the slots one at a time).
+     */
+    private static boolean migrateNotifySettings(SharedPreferences prefs) {
+        if (notifyMigrated) {
+            return true;
+        }
+        if (prefs.getBoolean("notify_migrated", false)) {
+            notifyMigrated = true;
+            return true;
+        }
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (!UserConfig.getInstance(a).isConfigLoaded()) {
+                return false;
+            }
+        }
+        final SharedPreferences.Editor editor = prefs.edit();
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            final long userId = UserConfig.getInstance(a).getClientUserId();
+            if (userId != 0) {
+                editor.putBoolean(notifyKey(userId), prefs.getBoolean(legacyNotifyKey(a), true));
+            }
+            editor.remove(legacyNotifyKey(a));
+        }
+        editor.putBoolean("notify_migrated", true).apply();
+        notifyMigrated = true;
+        return true;
+    }
+
+    /** False when this account's notifications are off (switched off, or added after the first account). */
     public static boolean notificationsEnabled(int account) {
         if (ApplicationLoader.applicationContext == null) {
             return true;
         }
-        Boolean cached = notifyByAccount.get(account);
+        final long userId = UserConfig.getInstance(account).getClientUserId();
+        if (userId == 0) {
+            return true;
+        }
+        final Boolean cached = notifyByUser.get(userId);
         if (cached != null) {
             return cached;
         }
-        boolean value = prefs().getBoolean(notifyKey(account), true);
-        notifyByAccount.put(account, value);
+        final SharedPreferences prefs = prefs();
+        if (!migrateNotifySettings(prefs)) {
+            return prefs.getBoolean(legacyNotifyKey(account), true);
+        }
+        final String key = notifyKey(userId);
+        final boolean value;
+        if (prefs.contains(key)) {
+            value = prefs.getBoolean(key, true);
+        } else {
+            // A login made after this build's first run: on only while it is the sole account.
+            boolean others = false;
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                if (a != account && UserConfig.getInstance(a).isClientActivated()) {
+                    others = true;
+                    break;
+                }
+            }
+            value = !others;
+            prefs.edit().putBoolean(key, value).apply();
+        }
+        notifyByUser.put(userId, value);
         return value;
     }
 
     public static void setNotificationsEnabled(int account, boolean enabled) {
-        notifyByAccount.put(account, enabled);
+        final long userId = UserConfig.getInstance(account).getClientUserId();
+        if (userId == 0) {
+            return;
+        }
+        notifyByUser.put(userId, enabled);
         if (ApplicationLoader.applicationContext != null) {
-            prefs().edit().putBoolean(notifyKey(account), enabled).apply();
+            prefs().edit().putBoolean(notifyKey(userId), enabled).apply();
         }
     }
 
