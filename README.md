@@ -7,6 +7,7 @@ Your own build of Telegram for Android with the account limit raised (32 account
 - The estimated month the account was created shown next to their online status in profiles (worked out from the ID), and the user's ID on its own row below — tap it to copy. Both switchable.
 - Group and channel profiles get the same ID row, under the invite link, in the form bots and the API use (`-100…` for supergroups and channels, `-…` for basic groups). Tap to copy.
 - The Accounts card on the Settings tab shows each account's number under its name, with the flag of its country code (e.g. 🇸🇬 +65 8835 7983).
+- The accounts there can be dragged into any order: hold the ≡ handle at the right of a row (or long-press the row) and move it. The order is kept and used wherever accounts are listed — the account switcher menu too. Telegram sorts accounts by the time they were added, so a new account still goes to the end.
 - **Add Account** at the bottom of the Accounts card on the Settings tab, just above Account.
 - **Sync Contacts** is unticked by default when adding an account (tick it yourself if you want it).
 - The Administrators list shows one line of each admin's bio where Telegram shows "Promoted by …" (admins without a bio keep that text).

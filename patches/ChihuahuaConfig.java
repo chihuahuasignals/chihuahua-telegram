@@ -278,6 +278,63 @@ public class ChihuahuaConfig {
         return flag.isEmpty() ? formatted : flag + " " + formatted;
     }
 
+    // ---- account order (drag to arrange on the Settings tab) ---------------------------------
+    // Every account list in the app (Settings tab, the account switcher, the auth sheets) sorts by
+    // UserConfig.loginTime, which is used for nothing else. So an order chosen by dragging is
+    // stored by handing the accounts their loginTime values back in the new order: same values,
+    // permuted, made distinct where two were equal. All lists then agree, and an account added
+    // later (loginTime = now) still lands at the end.
+
+    /** All logged-in accounts in display order: loginTime ascending, slot number as tie-break. */
+    public static java.util.ArrayList<Integer> accountsInOrder() {
+        final java.util.ArrayList<Integer> all = new java.util.ArrayList<>();
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (UserConfig.getInstance(a).isClientActivated()) {
+                all.add(a);
+            }
+        }
+        java.util.Collections.sort(all, (o1, o2) -> Integer.compare(UserConfig.getInstance(o1).loginTime, UserConfig.getInstance(o2).loginTime));
+        return all;
+    }
+
+    /**
+     * Makes {@code visible} (account slots, as arranged on the Settings tab) the new order. The tab
+     * never lists the account it belongs to ({@code current}), so that one keeps its old position
+     * among the others; accounts the list did not show follow in their old order.
+     */
+    public static void applyAccountOrder(java.util.List<Integer> visible, int current) {
+        final java.util.ArrayList<Integer> before = accountsInOrder();
+        final java.util.ArrayList<Integer> after = new java.util.ArrayList<>();
+        for (int a : visible) {
+            if (a != current && before.contains(a) && !after.contains(a)) {
+                after.add(a);
+            }
+        }
+        for (int a : before) {
+            if (a != current && !after.contains(a)) {
+                after.add(a);
+            }
+        }
+        final int currentRank = before.indexOf(current);
+        if (currentRank >= 0) {
+            after.add(Math.min(currentRank, after.size()), current);
+        }
+        final int[] times = new int[before.size()];
+        for (int i = 0; i < before.size(); i++) {
+            times[i] = UserConfig.getInstance(before.get(i)).loginTime;
+            if (i > 0 && times[i] <= times[i - 1]) {
+                times[i] = times[i - 1] + 1;
+            }
+        }
+        for (int i = 0; i < after.size() && i < times.length; i++) {
+            final UserConfig config = UserConfig.getInstance(after.get(i));
+            if (config.loginTime != times[i]) {
+                config.loginTime = times[i];
+                config.saveConfig(false);
+            }
+        }
+    }
+
     // ---- keeping every account connected -----------------------------------------------------
     // This build has no working Firebase push (Telegram's push servers can only deliver to tokens
     // from Telegram's own Firebase project), so notifications depend entirely on Telegram's

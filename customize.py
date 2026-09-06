@@ -980,6 +980,7 @@ def patch_theme98():
     patch_add_account_button()
     patch_sync_contacts_off()
     patch_account_phone_line()
+    patch_account_order()
     patch_group_age_badge()
     patch_quick_ban()
     patch_foreground_connection()
@@ -1343,6 +1344,80 @@ def patch_account_phone_line():
          "            botDrawable.setCurrentAccount(account);\n", 1),
         ("                MeasureSpec.makeMeasureSpec(dp(48), MeasureSpec.EXACTLY)\n",
          "                MeasureSpec.makeMeasureSpec(dp(58), MeasureSpec.EXACTLY)\n", 1),
+    ])
+
+
+def patch_account_order():
+    """The Accounts card on the Settings tab can be dragged into any order.
+
+    Telegram's UniversalRecyclerView already has drag-to-reorder (ItemTouchHelper behind
+    listenReorder/allowReorder, used by Chat Folders, Stickers and Quick Replies); the account rows
+    just need to sit in a reorder section. Long-pressing a row starts the drag, and the arrow at
+    the row's right end becomes a drag handle that starts one on touch. When the drag ends the new
+    order is written back through ChihuahuaConfig.applyAccountOrder(), which permutes the accounts'
+    loginTime values - the only thing any account list in the app sorts by - so the switcher menu
+    and the auth sheets follow the same order without being touched.
+    Runs after patch_add_account_button() and patch_account_phone_line(): anchors on their output."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java", [
+        # the list learns to reorder
+        ("        listView.adapter.setApplyBackground(false);\n        listView.setSections();\n",
+         "        listView.adapter.setApplyBackground(false);\n        listView.setSections();\n"
+         "        // Chihuahua: accounts can be dragged into any order (long-press a row, or grab the handle).\n"
+         "        listView.listenReorder(this::chihuahuaAccountsReordered);\n"
+         "        listView.allowReorder(true);\n", 1),
+        # the account rows form the reorder section
+        ("        if (accountNumbers.size() > 0) {\n"
+         "            items.add(UItem.asHeader(getString(R.string.SettingsAccounts)));\n"
+         "            for (int i = 0; i < accountNumbers.size(); ++i) {\n"
+         "                items.add(AccountCell.Factory.of(i, accountNumbers.get(i)));\n"
+         "            }\n"
+         "        }\n",
+         "        if (accountNumbers.size() > 0) {\n"
+         "            items.add(UItem.asHeader(getString(R.string.SettingsAccounts)));\n"
+         "            chihuahuaAccountsOrderId = adapter.reorderSectionStart();\n"
+         "            for (int i = 0; i < accountNumbers.size(); ++i) {\n"
+         "                items.add(AccountCell.Factory.of(i, accountNumbers.get(i)));\n"
+         "            }\n"
+         "            adapter.reorderSectionEnd();\n"
+         "        }\n", 1),
+        # the drop handler
+        ("    private boolean onLongClick(UItem item, View view, int position, float x, float y) {\n",
+         "    private int chihuahuaAccountsOrderId = -1;\n"
+         "    private void chihuahuaAccountsReordered(int id, ArrayList<UItem> items) {\n"
+         "        if (id != chihuahuaAccountsOrderId) {\n"
+         "            return;\n"
+         "        }\n"
+         "        final ArrayList<Integer> order = new ArrayList<>();\n"
+         "        for (UItem item : items) {\n"
+         "            if (item.instanceOf(AccountCell.Factory.class)) {\n"
+         "                order.add(item.intValue);\n"
+         "            }\n"
+         "        }\n"
+         "        org.telegram.messenger.ChihuahuaConfig.applyAccountOrder(order, currentAccount);\n"
+         "    }\n\n"
+         "    private boolean onLongClick(UItem item, View view, int position, float x, float y) {\n", 1),
+        # the arrow becomes a drag handle with a 48dp touch target (icon stays centred where the arrow was)
+        ("            arrowView.setImageResource(R.drawable.msg_arrowright);\n",
+         "            arrowView.setImageResource(R.drawable.list_reorder); // Chihuahua: drag handle\n", 1),
+        ("                addView(arrowView, LayoutHelper.createLinear(24, 24, 0, Gravity.CENTER_VERTICAL | Gravity.LEFT, 12, 0, 0, 0));\n",
+         "                addView(arrowView, LayoutHelper.createLinear(48, 48, 0, Gravity.CENTER_VERTICAL | Gravity.LEFT, 0, 0, 0, 0));\n", 1),
+        ("                addView(arrowView, LayoutHelper.createLinear(24, 24, 0, Gravity.CENTER_VERTICAL | Gravity.RIGHT, 0, 0, 12, 0));\n",
+         "                addView(arrowView, LayoutHelper.createLinear(48, 48, 0, Gravity.CENTER_VERTICAL | Gravity.RIGHT, 0, 0, 0, 0));\n", 1),
+        ("                return new AccountCell(context, resourcesProvider);\n",
+         "                final AccountCell cell = new AccountCell(context, resourcesProvider);\n"
+         "                // Chihuahua: touching the handle starts the drag at once; long-pressing the row works too.\n"
+         "                cell.arrowView.setClickable(true);\n"
+         "                cell.arrowView.setOnTouchListener((v, event) -> {\n"
+         "                    if (event.getAction() == MotionEvent.ACTION_DOWN && listView instanceof UniversalRecyclerView) {\n"
+         "                        final UniversalRecyclerView universal = (UniversalRecyclerView) listView;\n"
+         "                        final RecyclerView.ViewHolder holder = listView.getChildViewHolder(cell);\n"
+         "                        if (universal.itemTouchHelper != null && universal.isReorderAllowed() && holder != null) {\n"
+         "                            universal.itemTouchHelper.startDrag(holder);\n"
+         "                        }\n"
+         "                    }\n"
+         "                    return false;\n"
+         "                });\n"
+         "                return cell;\n", 1),
     ])
 
 
