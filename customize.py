@@ -977,6 +977,7 @@ def patch_theme98():
     patch_profile_action_buttons()
     patch_adaptive_header_text()
     patch_admin_bio()
+    patch_add_account_button()
     patch_group_age_badge()
     patch_quick_ban()
     patch_foreground_connection()
@@ -1240,6 +1241,55 @@ def patch_admin_bio():
          "                            }\n"
          "                            userCell.setData(object, null, role, position != lastRow - 1);\n"
          "                        } else if (type == TYPE_USERS) {\n", 1),
+    ])
+
+
+def patch_add_account_button():
+    """"Add Account" at the bottom of the Accounts card on the Settings tab, right above Account.
+    Same flow as Telegram's own menu item (free slot -> login screen; none -> the limit sheet).
+    Shown even when no other account is logged in yet."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java", [
+        ("        if (accountNumbers.size() > 0) {\n"
+         "            items.add(UItem.asHeader(getString(R.string.SettingsAccounts)));\n"
+         "            for (int i = 0; i < accountNumbers.size(); ++i) {\n"
+         "                items.add(AccountCell.Factory.of(i, accountNumbers.get(i)));\n"
+         "            }\n"
+         "            items.add(UItem.asShadow(null));\n"
+         "        }\n",
+         "        if (accountNumbers.size() > 0) {\n"
+         "            items.add(UItem.asHeader(getString(R.string.SettingsAccounts)));\n"
+         "            for (int i = 0; i < accountNumbers.size(); ++i) {\n"
+         "                items.add(AccountCell.Factory.of(i, accountNumbers.get(i)));\n"
+         "            }\n"
+         "        }\n"
+         "        // Chihuahua: Add Account right here, above Account.\n"
+         "        items.add(UItem.asButton(990, R.drawable.msg_addbot, getString(R.string.AddAccount)).accent());\n"
+         "        items.add(UItem.asShadow(null));\n", 1),
+        ("        switch (item.id) {\n            case 1:\n                presentSettingFragment(new UserInfoActivity());\n                break;\n",
+         "        switch (item.id) {\n"
+         "            case 990: {\n"
+         "                // Chihuahua: same flow as Telegram's own Add Account menu item.\n"
+         "                int chihuahuaFree = 0;\n"
+         "                Integer chihuahuaSlot = null;\n"
+         "                for (int a = UserConfig.MAX_ACCOUNT_COUNT - 1; a >= 0; a--) {\n"
+         "                    if (!UserConfig.getInstance(a).isClientActivated()) {\n"
+         "                        chihuahuaFree++;\n"
+         "                        if (chihuahuaSlot == null) {\n"
+         "                            chihuahuaSlot = a;\n"
+         "                        }\n"
+         "                    }\n"
+         "                }\n"
+         "                if (!UserConfig.hasPremiumOnAccounts()) {\n"
+         "                    chihuahuaFree -= (UserConfig.MAX_ACCOUNT_COUNT - UserConfig.MAX_ACCOUNT_DEFAULT_COUNT);\n"
+         "                }\n"
+         "                if (chihuahuaFree > 0 && chihuahuaSlot != null) {\n"
+         "                    presentFragment(new LoginActivity(chihuahuaSlot));\n"
+         "                } else if (!UserConfig.hasPremiumOnAccounts()) {\n"
+         "                    showDialog(new org.telegram.ui.Components.Premium.LimitReachedBottomSheet(this, getContext(), org.telegram.ui.Components.Premium.LimitReachedBottomSheet.TYPE_ACCOUNTS, currentAccount, null));\n"
+         "                }\n"
+         "                break;\n"
+         "            }\n"
+         "            case 1:\n                presentSettingFragment(new UserInfoActivity());\n                break;\n", 1),
     ])
 
 
