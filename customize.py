@@ -1093,12 +1093,13 @@ def patch_profile_action_buttons():
     per-mode list -> click), and are only offered when the account has the matching rights."""
     pav = "TMessagesProj/src/main/java/org/telegram/ui/Components/ProfileActionsView.java"
     pa = "TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java"
+    # Anchor on the root tag: patch_app_name() has already rewritten the AppName line by now.
     edit("TMessagesProj/src/main/res/values/strings.xml", [
-        ('<string name="AppName">Telegram</string>',
-         '<string name="AppName">Telegram</string>\n'
+        ('<resources>\n',
+         '<resources>\n'
          '    <string name="ChihuahuaAdmins">Admins</string>\n'
          '    <string name="ChihuahuaRecentActions">Recent Actions</string>\n'
-         '    <string name="ChihuahuaInviteLinks">Invite Links</string>', 1),
+         '    <string name="ChihuahuaInviteLinks">Invite Links</string>\n', 1),
     ])
     edit(pav, [
         # keys
