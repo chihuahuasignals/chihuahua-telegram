@@ -977,6 +977,7 @@ def patch_theme98():
     patch_profile_action_buttons()
     patch_adaptive_header_text()
     patch_hint_contrast()
+    patch_phone_copy()
     patch_admin_bio()
     patch_add_account_button()
     patch_sync_contacts_off()
@@ -1419,6 +1420,27 @@ def patch_account_order():
          "                    return false;\n"
          "                });\n"
          "                return cell;\n", 1),
+    ])
+
+
+def patch_phone_copy():
+    """A tap on the "+44 7468 350735 • @username" line under the name on the Settings tab copies the
+    phone number (formatted as shown) and confirms with Telegram's own "Phone copied" bulletin.
+    The line shrinks to its text with a rounded ripple so it reads as tappable."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java", [
+        ("        topView.addView(subtitleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 0, 168 - 12, 0, 0));\n",
+         "        // Chihuahua: a tap on this line copies the phone number.\n"
+         "        subtitleView.setPadding(dp(8), dp(4), dp(8), dp(4));\n"
+         "        subtitleView.setBackground(Theme.createRadSelectorDrawable(getThemedColor(Theme.key_listSelector), 8, 8));\n"
+         "        subtitleView.setOnClickListener(v -> {\n"
+         "            final TLRPC.User chihuahuaUser = getUserConfig().getCurrentUser();\n"
+         "            if (chihuahuaUser == null || TextUtils.isEmpty(chihuahuaUser.phone)) {\n"
+         "                return;\n"
+         "            }\n"
+         "            AndroidUtilities.addToClipboard(PhoneFormat.getInstance().format(\"+\" + chihuahuaUser.phone));\n"
+         "            BulletinFactory.of(this).createCopyBulletin(getString(R.string.PhoneCopied)).show();\n"
+         "        });\n"
+         "        topView.addView(subtitleView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 16, 168 - 12 - 4, 16, 0));\n", 1),
     ])
 
 

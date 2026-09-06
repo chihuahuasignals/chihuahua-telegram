@@ -485,6 +485,33 @@ def patch_admins():
     ])
 
 
+SETTINGS_MAIN = "Telegram/SourceFiles/settings/sections/settings_main.cpp"
+
+PHONE_COPY_CODE = (
+    '\t// Chihuahua: a left click on the number copies it (the right-click menu stays).\n'
+    '\tbase::install_event_filter(_phone.data(), [=](not_null<QEvent*> e) {\n'
+    '\t\tif (e->type() == QEvent::MouseButtonRelease\n'
+    '\t\t\t&& static_cast<QMouseEvent*>(e.get())->button() == Qt::LeftButton) {\n'
+    '\t\t\tInfo::Profile::CopyPhoneToClipboard(Info::Profile::PhoneValue(_user));\n'
+    '\t\t\t_controller->showToast(tr::lng_collectible_phone_copied(tr::now));\n'
+    '\t\t}\n'
+    '\t\treturn base::EventFilterResult::Continue;\n'
+    '\t});\n'
+)
+
+
+def patch_phone_copy():
+    """Settings cover: a left click on the phone number copies it (same as the phone's
+    right-click "Copy Phone Number", which stays) and shows Telegram's own "Phone number copied"
+    toast. The phone label is selectable, so a press-and-drag still selects; a plain click copies."""
+    edit(SETTINGS_MAIN, [
+        ('#include "base/call_delayed.h"\n',
+         '#include "base/call_delayed.h"\n#include "base/event_filter.h"\n#include <QtGui/QMouseEvent>\n', 1),
+        ('\t_phone->setContextMenuHook(hook);\n',
+         '\t_phone->setContextMenuHook(hook);\n' + PHONE_COPY_CODE, 1),
+    ])
+
+
 def patch_account_id():
     table = age_anchor_table()
     if not table:
@@ -602,6 +629,8 @@ def main():
     patch_account_id()
     # --- "Admins" in a group or channel menu, without needing admin rights
     patch_admins()
+    # --- Settings cover: click the phone number to copy it
+    patch_phone_copy()
     # --- icons
     art = ROOT / "Telegram" / "Resources" / "art"
     copied = 0

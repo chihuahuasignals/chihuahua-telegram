@@ -7,6 +7,7 @@ Your own build of Telegram for Android with the account limit raised (32 account
 - The estimated month the account was created shown next to their online status in profiles (worked out from the ID), and the user's ID on its own row below — tap it to copy. Both switchable.
 - Group and channel profiles get the same ID row, under the invite link, in the form bots and the API use (`-100…` for supergroups and channels, `-…` for basic groups). Tap to copy.
 - The Accounts card on the Settings tab shows each account's number under its name, with the flag of its country code (e.g. 🇸🇬 +65 8835 7983).
+- Tap the phone number under your name at the top of the Settings tab to copy it (the number as shown, e.g. +44 7468 350735).
 - The accounts there can be dragged into any order: hold the ≡ handle at the right of a row (or long-press the row) and move it. The order is kept and used wherever accounts are listed — the account switcher menu too. Telegram sorts accounts by the time they were added, so a new account still goes to the end.
 - **Add Account** at the bottom of the Accounts card on the Settings tab, just above Account.
 - **Sync Contacts** is unticked by default when adding an account (tick it yourself if you want it).
@@ -108,7 +109,7 @@ that ID). Both apps read the same anchor table out of `patches/ChihuahuaConfig.j
 estimates cannot drift apart (`customize_desktop.py` generates `Telegram/SourceFiles/chihuahua_age.h`
 from it). In group chats a sender under three months old gets ` · new` or ` · 2mo` after their name —
 plain, not red, and shown only for new accounts, so the badge appearing at all is the warning.
-**Admins** is in a group or channel's ⋮ menu here too. The Android app is Java and the desktop app is
+**Admins** is in a group or channel's ⋮ menu here too. In Settings, a left click on your phone number copies it (the right-click menu still has Copy Phone Number). The Android app is Java and the desktop app is
 C++/Qt, so nothing ports across: every feature is written twice. Still only on Android:
 Settings → Chihuahua, so on desktop the age threshold is fixed at three months and every feature is
 always on. Two Android features have no desktop equivalent and never will — the
