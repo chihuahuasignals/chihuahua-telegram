@@ -6,6 +6,7 @@ Your own build of Telegram for Android with the account limit raised (32 account
 - **Admins** in a group or channel's ⋮ menu — the full admin list in one tap, in any group you are in, not just ones you manage (Telegram only offers this through Manage Group, which needs admin rights).
 - The estimated month the account was created shown next to their online status in profiles (worked out from the ID), and the user's ID on its own row below — tap it to copy. Both switchable.
 - Group and channel profiles get the same ID row, under the invite link, in the form bots and the API use (`-100…` for supergroups and channels, `-…` for basic groups). Tap to copy.
+- The Accounts card on the Settings tab shows each account's number under its name, with the flag of its country code (e.g. 🇸🇬 +65 8835 7983).
 - **Add Account** at the bottom of the Accounts card on the Settings tab, just above Account.
 - **Sync Contacts** is unticked by default when adding an account (tick it yourself if you want it).
 - The Administrators list shows one line of each admin's bio where Telegram shows "Promoted by …" (admins without a bio keep that text).

@@ -227,6 +227,57 @@ public class ChihuahuaConfig {
         return (months / 12) + "y";
     }
 
+    // ---- phone number with its flag, for the Accounts list ----------------------------------
+
+    /** Calling code -> ISO country, from Telegram's own countries.txt; first entry wins for shared codes. */
+    private static volatile java.util.Map<String, String> codeToIso;
+
+    private static void loadCountries() {
+        if (codeToIso != null) {
+            return;
+        }
+        final java.util.HashMap<String, String> map = new java.util.HashMap<>();
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(
+                ApplicationLoader.applicationContext.getResources().getAssets().open("countries.txt")))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                final String[] args = line.split(";");
+                if (args.length >= 2 && !map.containsKey(args[0])) {
+                    map.put(args[0], args[1]);
+                }
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        codeToIso = map;
+    }
+
+    /** Flag emoji for a phone number given as digits without "+", or "" when the code is unknown. */
+    public static String flagForPhone(String digits) {
+        if (digits == null || digits.isEmpty()) {
+            return "";
+        }
+        loadCountries();
+        for (int len = Math.min(4, digits.length()); len >= 1; len--) {
+            final String iso = codeToIso.get(digits.substring(0, len));
+            if (iso != null) {
+                final String flag = LocaleController.getLanguageFlag(iso);
+                return flag == null ? "" : flag;
+            }
+        }
+        return "";
+    }
+
+    /** "🇸🇬 +65 8835 7983" for an account's number; "" when there is none. */
+    public static String phoneWithFlag(TLRPC.User user) {
+        if (user == null || user.phone == null || user.phone.isEmpty()) {
+            return "";
+        }
+        final String formatted = org.telegram.PhoneFormat.PhoneFormat.getInstance().format("+" + user.phone);
+        final String flag = flagForPhone(user.phone);
+        return flag.isEmpty() ? formatted : flag + " " + formatted;
+    }
+
     // ---- keeping every account connected -----------------------------------------------------
     // This build has no working Firebase push (Telegram's push servers can only deliver to tokens
     // from Telegram's own Firebase project), so notifications depend entirely on Telegram's

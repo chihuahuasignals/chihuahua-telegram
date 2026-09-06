@@ -979,6 +979,7 @@ def patch_theme98():
     patch_admin_bio()
     patch_add_account_button()
     patch_sync_contacts_off()
+    patch_account_phone_line()
     patch_group_age_badge()
     patch_quick_ban()
     patch_foreground_connection()
@@ -1303,6 +1304,45 @@ def patch_sync_contacts_off():
          "    private boolean syncContacts = false; // Chihuahua: off unless ticked\n", 1),
         ('            syncContacts = savedInstanceState.getInt("syncContacts", 1) == 1;\n',
          '            syncContacts = savedInstanceState.getInt("syncContacts", 0) == 1;\n', 1),
+    ])
+
+
+def patch_account_phone_line():
+    """Each row of the Accounts card gets a second line: the account's number, formatted, with the
+    flag of its country code (looked up in Telegram's own countries.txt). Row grows 48 -> 58 dp."""
+    sa = "TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java"
+    column = ("chihuahuaColumn(context)")
+    edit(sa, [
+        ("        private SimpleTextView textView;\n        private TextView counterView;\n",
+         "        private SimpleTextView textView;\n        private SimpleTextView chihuahuaPhoneView;\n        private TextView counterView;\n", 1),
+        # name + number stacked where the name alone used to sit (LTR and RTL)
+        ("                addView(textView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1f, Gravity.FILL, 0, 0, 18, 0));\n",
+         "                addView(" + column + ", LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1f, Gravity.FILL, 0, 0, 18, 0));\n", 1),
+        ("                addView(textView, LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1f, Gravity.FILL, 18, 0, 0, 0));\n",
+         "                addView(" + column + ", LayoutHelper.createLinear(0, LayoutHelper.MATCH_PARENT, 1f, Gravity.FILL, 18, 0, 0, 0));\n", 1),
+        # the column builder, placed just before updateColors()
+        ("        @Override\n        public void updateColors() {\n            textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));\n            counterView.setBackground(",
+         "        private LinearLayout chihuahuaColumn(Context context) {\n"
+         "            chihuahuaPhoneView = new SimpleTextView(context);\n"
+         "            chihuahuaPhoneView.setTextSize(13);\n"
+         "            chihuahuaPhoneView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, resourcesProvider));\n"
+         "            chihuahuaPhoneView.setGravity(Gravity.CENTER_VERTICAL | (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT));\n"
+         "            final LinearLayout column = new LinearLayout(context);\n"
+         "            column.setOrientation(VERTICAL);\n"
+         "            column.setGravity(Gravity.CENTER_VERTICAL);\n"
+         "            column.addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 20));\n"
+         "            column.addView(chihuahuaPhoneView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 18));\n"
+         "            return column;\n"
+         "        }\n\n"
+         "        @Override\n        public void updateColors() {\n            textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));\n"
+         "            chihuahuaPhoneView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, resourcesProvider));\n"
+         "            counterView.setBackground(", 1),
+        ("            textView.setText(UserObject.getUserName(user));\n\n            botDrawable.setCurrentAccount(account);\n",
+         "            textView.setText(UserObject.getUserName(user));\n"
+         "            chihuahuaPhoneView.setText(Emoji.replaceEmoji(org.telegram.messenger.ChihuahuaConfig.phoneWithFlag(user), chihuahuaPhoneView.getPaint().getFontMetricsInt(), false));\n\n"
+         "            botDrawable.setCurrentAccount(account);\n", 1),
+        ("                MeasureSpec.makeMeasureSpec(dp(48), MeasureSpec.EXACTLY)\n",
+         "                MeasureSpec.makeMeasureSpec(dp(58), MeasureSpec.EXACTLY)\n", 1),
     ])
 
 
