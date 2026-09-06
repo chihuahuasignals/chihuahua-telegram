@@ -975,6 +975,8 @@ def patch_theme98():
     patch_per_account_notifications()
     patch_id_row()
     patch_profile_action_buttons()
+    patch_adaptive_header_text()
+    patch_admin_bio()
     patch_group_age_badge()
     patch_quick_ban()
     patch_foreground_connection()
@@ -1171,6 +1173,73 @@ def patch_profile_action_buttons():
          "                        break;\n"
          "                    }\n"
          "                    case ProfileActionsView.KEY_LEAVE:\n                        leaveChatPressed(false);\n                        break;\n", 1),
+    ])
+
+
+def patch_adaptive_header_text():
+    """Title and icons that switch with the "adaptive" action bar.
+
+    Telegram 12.x colours the header of ~60 list screens (admins, members, settings pages...) with
+    the BODY colour while the list is at the top, blending to actionBarDefault as you scroll. The
+    title and icons stay actionBarDefaultTitle/Icon throughout. Fine for Telegram's themes; with a
+    navy bar, white text and a light body it means a white title on the grey body until you scroll.
+    Blend the text too: dark while the bar shows a light colour, the theme's own colour once it
+    has scrolled onto the bar colour. Decided by the actual brightness of the top colour, so dark
+    themes and Telegram's own light themes are unaffected."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/ActionBar/ActionBar.java", [
+        ("        setBackgroundColor(ColorUtils.blendARGB(lowerColor, topColor, factor));\n"
+         "        setShadowAlpha((int) ((1.0f - onTopAnimated) * 0xFF));\n",
+         "        setBackgroundColor(ColorUtils.blendARGB(lowerColor, topColor, factor));\n"
+         "        // Chihuahua: with a navy bar over a light body the text must switch too - dark while\n"
+         "        // the bar shows the body colour, the theme's own colours once scrolled onto navy.\n"
+         "        if (adaptive_topColorKey != -1) {\n"
+         "            final int barTitle = Theme.getColor(Theme.key_actionBarDefaultTitle, resourcesProvider);\n"
+         "            final int barIcon = Theme.getColor(Theme.key_actionBarDefaultIcon, resourcesProvider);\n"
+         "            final boolean topIsLight = AndroidUtilities.computePerceivedBrightness(topColor) > 0.72f;\n"
+         "            final int topInk = topIsLight ? Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider) : barTitle;\n"
+         "            setTitleColor(ColorUtils.blendARGB(barTitle, topInk, factor));\n"
+         "            setItemsColor(ColorUtils.blendARGB(barIcon, topIsLight ? topInk : barIcon, factor), false);\n"
+         "        }\n"
+         "        setShadowAlpha((int) ((1.0f - onTopAnimated) * 0xFF));\n", 1),
+    ])
+
+
+def patch_admin_bio():
+    """One line of each admin's bio in the Administrators list, where Telegram shows
+    "Promoted by X". Full user info is fetched lazily per admin and the list refreshes as it
+    arrives; admins without a bio keep the promoted-by text."""
+    cu = "TMessagesProj/src/main/java/org/telegram/ui/ChatUsersActivity.java"
+    edit(cu, [
+        ("        getNotificationCenter().addObserver(this, NotificationCenter.dialogDeleted);\n",
+         "        getNotificationCenter().addObserver(this, NotificationCenter.dialogDeleted);\n"
+         "        getNotificationCenter().addObserver(this, NotificationCenter.userInfoDidLoad);\n", 1),
+        ("        getNotificationCenter().removeObserver(this, NotificationCenter.dialogDeleted);\n",
+         "        getNotificationCenter().removeObserver(this, NotificationCenter.dialogDeleted);\n"
+         "        getNotificationCenter().removeObserver(this, NotificationCenter.userInfoDidLoad);\n", 1),
+        ("    public void didReceivedNotification(int id, int account, Object... args) {\n"
+         "        if (id == NotificationCenter.chatInfoDidLoad) {\n",
+         "    public void didReceivedNotification(int id, int account, Object... args) {\n"
+         "        if (id == NotificationCenter.userInfoDidLoad) {\n"
+         "            if (type == TYPE_ADMIN && listViewAdapter != null) {\n"
+         "                listViewAdapter.notifyDataSetChanged();\n"
+         "            }\n"
+         "            return;\n"
+         "        }\n"
+         "        if (id == NotificationCenter.chatInfoDidLoad) {\n", 1),
+        ("                            userCell.setData(object, null, role, position != lastRow - 1);\n"
+         "                        } else if (type == TYPE_USERS) {\n",
+         "                            // Chihuahua: one line of the admin's bio, when they have one.\n"
+         "                            if (object instanceof TLRPC.User) {\n"
+         "                                final TLRPC.User chihuahuaAdmin = (TLRPC.User) object;\n"
+         "                                final TLRPC.UserFull chihuahuaFull = getMessagesController().getUserFull(chihuahuaAdmin.id);\n"
+         "                                if (chihuahuaFull == null) {\n"
+         "                                    getMessagesController().loadFullUser(chihuahuaAdmin, classGuid, false);\n"
+         "                                } else if (!TextUtils.isEmpty(chihuahuaFull.about)) {\n"
+         "                                    role = chihuahuaFull.about.replace('\\n', ' ').trim();\n"
+         "                                }\n"
+         "                            }\n"
+         "                            userCell.setData(object, null, role, position != lastRow - 1);\n"
+         "                        } else if (type == TYPE_USERS) {\n", 1),
     ])
 
 
