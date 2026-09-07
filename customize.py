@@ -981,6 +981,7 @@ def patch_theme98():
     patch_admin_bio()
     patch_add_account_button()
     patch_sync_contacts_off()
+    patch_enter_proceeds()
     patch_account_phone_line()
     patch_account_order()
     patch_group_age_badge()
@@ -1307,6 +1308,41 @@ def patch_sync_contacts_off():
          "    private boolean syncContacts = false; // Chihuahua: off unless ticked\n", 1),
         ('            syncContacts = savedInstanceState.getInt("syncContacts", 1) == 1;\n',
          '            syncContacts = savedInstanceState.getInt("syncContacts", 0) == 1;\n', 1),
+    ])
+
+
+def patch_enter_proceeds():
+    """Login screens: the keyboard's Enter key proceeds. A hardware or IME Enter reaches the
+    field as a plain key event with no IME action; Telegram's listeners only answer to
+    IME_ACTION_NEXT, so Android's default took over and hopped focus to the next view (the Sync
+    Contacts box on the phone screen). Treat Enter like Next on every login field and swallow the
+    key-up so focus stays where it is. Runs after patch_sync_contacts_off(): anchors on its output."""
+    la = "TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java"
+    edit(la, [
+        ("    private boolean syncContacts = false; // Chihuahua: off unless ticked\n",
+         "    private boolean syncContacts = false; // Chihuahua: off unless ticked\n\n"
+         "    // Chihuahua: a keyboard's Enter key arrives as a key event without an IME action; Android would\n"
+         "    // then move focus to the next view. These make every login field treat it as Next.\n"
+         "    private static boolean chihuahuaIsEnter(int actionId, KeyEvent event) {\n"
+         "        return actionId == EditorInfo.IME_NULL && event != null\n"
+         "            && (event.getKeyCode() == KeyEvent.KEYCODE_ENTER || event.getKeyCode() == KeyEvent.KEYCODE_NUMPAD_ENTER);\n"
+         "    }\n\n"
+         "    private static boolean chihuahuaEnterPressed(int actionId, KeyEvent event) {\n"
+         "        return chihuahuaIsEnter(actionId, event) && event.getAction() == KeyEvent.ACTION_DOWN;\n"
+         "    }\n\n"
+         "    private static boolean chihuahuaEnterReleased(int actionId, KeyEvent event) {\n"
+         "        return chihuahuaIsEnter(actionId, event) && event.getAction() != KeyEvent.ACTION_DOWN;\n"
+         "    }\n", 1),
+        ("                if (i == EditorInfo.IME_ACTION_NEXT) {\n",
+         "                if (chihuahuaEnterReleased(i, keyEvent)) {\n"
+         "                    return true; // the press already acted; keep the release from moving focus\n"
+         "                }\n"
+         "                if (i == EditorInfo.IME_ACTION_NEXT || chihuahuaEnterPressed(i, keyEvent)) {\n", 6),
+        ("                if (i == EditorInfo.IME_ACTION_DONE || i == EditorInfo.IME_ACTION_NEXT) {\n",
+         "                if (chihuahuaEnterReleased(i, keyEvent)) {\n"
+         "                    return true;\n"
+         "                }\n"
+         "                if (i == EditorInfo.IME_ACTION_DONE || i == EditorInfo.IME_ACTION_NEXT || chihuahuaEnterPressed(i, keyEvent)) {\n", 1),
     ])
 
 
