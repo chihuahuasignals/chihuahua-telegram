@@ -103,7 +103,10 @@ Releases are tagged `desktop-v…`; unzip and run the .exe (portable, data in `%
 
 The desktop build has the name, icon, 32-account limit and the same three moderation items on a
 message's right-click menu — **Ban, wipe & report**, **Mute, wipe & report**, **Wipe & report** —
-each covering every group you manage, exactly as on the phone. It also shows two extra rows in a
+with the same behaviour as on the phone: in every group you manage, find the sender's messages,
+report them for spam, then delete every message and reaction of theirs; Wipe runs at once, Ban and
+Mute ask first. The account rows in the ☰ menu and in Settings show each account's calling code
+after the name (Quah Kee · +65). It also shows two extra rows in a
 user's profile: **ID** (right-click → Copy ID) and **Account created** (the month estimated from
 that ID). Both apps read the same anchor table out of `patches/ChihuahuaConfig.java`, so their
 estimates cannot drift apart (`customize_desktop.py` generates `Telegram/SourceFiles/chihuahua_age.h`

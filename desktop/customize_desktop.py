@@ -125,6 +125,95 @@ enum class ChihuahuaMode {
 \treturn result;
 }
 
+// One group: find the sender's messages there, report them for spam, and only
+// once that request has been answered delete everything of theirs (messages
+// and reactions) and, for Mute/Ban, restrict or remove them. Mirrors
+// chihuahuaWipeInGroup() in the Android build.
+void ChihuahuaWipeInGroup(
+\t\tnot_null<Main::Session*> session,
+\t\tnot_null<ChannelData*> group,
+\t\tnot_null<UserData*> user,
+\t\tChihuahuaMode mode,
+\t\tMsgId knownId) {
+\tconst auto wipe = [=] {
+\t\tsession->api().deleteAllFromParticipant(group, user);
+\t\tsession->api().deleteAllReactionsFromParticipant(
+\t\t\tgroup,
+\t\t\tuser,
+\t\t\tMsgId(),
+\t\t\tData::ReactionId());
+\t\tif (mode == ChihuahuaMode::Mute) {
+\t\t\tApi::ChatParticipants::Restrict(
+\t\t\t\tgroup,
+\t\t\t\tuser,
+\t\t\t\tChatRestrictionsInfo(),
+\t\t\t\tChihuahuaMuteRights(),
+\t\t\t\tnullptr,
+\t\t\t\tnullptr);
+\t\t} else if (mode == ChihuahuaMode::Ban) {
+\t\t\tsession->api().chatParticipants().kick(
+\t\t\t\tgroup,
+\t\t\t\tuser,
+\t\t\t\tChatRestrictionsInfo());
+\t\t}
+\t};
+\tconst auto report = [=](std::vector<int32> found) {
+\t\tif (knownId && !ranges::contains(found, int32(knownId.bare))) {
+\t\t\tfound.push_back(int32(knownId.bare));
+\t\t}
+\t\tif (found.empty()) {
+\t\t\twipe();
+\t\t\treturn;
+\t\t}
+\t\tauto ids = QVector<MTPint>();
+\t\tids.reserve(found.size());
+\t\tfor (const auto id : found) {
+\t\t\tids.push_back(MTP_int(id));
+\t\t}
+\t\tsession->api().request(MTPchannels_ReportSpam(
+\t\t\tgroup->inputChannel(),
+\t\t\tuser->input(),
+\t\t\tMTP_vector<MTPint>(ids)
+\t\t)).done([=](const MTPBool &) {
+\t\t\twipe();
+\t\t}).fail([=](const MTP::Error &) {
+\t\t\twipe();
+\t\t}).send();
+\t};
+\tusing Flag = MTPmessages_Search::Flag;
+\tsession->api().request(MTPmessages_Search(
+\t\tMTP_flags(Flag::f_from_id),
+\t\tgroup->input(),
+\t\tMTP_string(), // q
+\t\tuser->input(), // from_id
+\t\tMTPInputPeer(), // saved_peer_id
+\t\tMTPVector<MTPReaction>(), // saved_reaction
+\t\tMTPint(), // top_msg_id
+\t\tMTP_inputMessagesFilterEmpty(),
+\t\tMTP_int(0), // min_date
+\t\tMTP_int(0), // max_date
+\t\tMTP_int(0), // offset_id
+\t\tMTP_int(0), // add_offset
+\t\tMTP_int(100), // limit
+\t\tMTP_int(0), // max_id
+\t\tMTP_int(0), // min_id
+\t\tMTP_long(0) // hash
+\t)).done([=](const MTPmessages_Messages &result) {
+\t\tauto found = std::vector<int32>();
+\t\tresult.match([&](const MTPDmessages_messagesNotModified &) {
+\t\t}, [&](const auto &data) {
+\t\t\tfor (const auto &message : data.vmessages().v) {
+\t\t\t\tfound.push_back(message.match([](const auto &d) {
+\t\t\t\t\treturn d.vid().v;
+\t\t\t\t}));
+\t\t\t}
+\t\t});
+\t\treport(std::move(found));
+\t}).fail([=](const MTP::Error &) {
+\t\treport({});
+\t}).send();
+}
+
 void ChihuahuaAct(
 \t\tnot_null<Window::SessionController*> controller,
 \t\tFullMsgId itemId,
@@ -147,59 +236,38 @@ void ChihuahuaAct(
 \tconst auto where = (count == 1)
 \t\t? u"1 group"_q
 \t\t: (QString::number(count) + u" groups"_q);
+\tconst auto here = item->history()->peer->asChannel();
+\tconst auto knownId = item->id;
+\tconst auto run = [=] {
+\t\tfor (const auto &group : groups) {
+\t\t\tChihuahuaWipeInGroup(
+\t\t\t\tsession,
+\t\t\t\tgroup,
+\t\t\t\tuser,
+\t\t\t\tmode,
+\t\t\t\t(group.get() == here) ? knownId : MsgId());
+\t\t}
+\t\tcontroller->showToast((mode == ChihuahuaMode::Ban)
+\t\t\t? (u"Banned, wiped and reported in "_q + where + u"."_q)
+\t\t\t: (mode == ChihuahuaMode::Mute)
+\t\t\t? (u"Muted, wiped and reported in "_q + where + u"."_q)
+\t\t\t: (u"Wiped and reported in "_q + where + u"."_q));
+\t};
+\tif (mode == ChihuahuaMode::Wipe) {
+\t\trun(); // no confirmation: it only cleans up
+\t\treturn;
+\t}
 \tconst auto text = ((mode == ChihuahuaMode::Ban)
 \t\t? u"Ban %1, delete every message and reaction of theirs, and report them for spam in %2 you manage?"_q
-\t\t: (mode == ChihuahuaMode::Mute)
-\t\t? u"Mute %1 for good, delete every message and reaction of theirs, and report them for spam in %2 you manage?"_q
-\t\t: u"Delete every message and reaction of %1 and report them for spam in %2 you manage?"_q
+\t\t: u"Mute %1 for good, delete every message and reaction of theirs, and report them for spam in %2 you manage?"_q
 \t\t).arg(user->name(), where);
 \tconst auto confirm = (mode == ChihuahuaMode::Ban)
 \t\t? u"Ban & wipe"_q
-\t\t: (mode == ChihuahuaMode::Mute)
-\t\t? u"Mute & wipe"_q
-\t\t: u"Wipe"_q;
-
-\t// Report the message that was right-clicked (and its album, if any).
-\tauto reportIds = MessageIdsList();
-\tif (const auto group = owner->groups().find(item)) {
-\t\tfor (const auto &i : group->items) {
-\t\t\treportIds.push_back(i->fullId());
-\t\t}
-\t} else {
-\t\treportIds.push_back(itemId);
-\t}
-
+\t\t: u"Mute & wipe"_q;
 \tcontroller->show(Ui::MakeConfirmBox({
 \t\t.text = text,
 \t\t.confirmed = [=](Fn<void()> close) {
-\t\t\tApi::ReportSpam(user, reportIds);
-\t\t\tfor (const auto &group : groups) {
-\t\t\t\tsession->api().deleteAllFromParticipant(group, user);
-\t\t\t\tsession->api().deleteAllReactionsFromParticipant(
-\t\t\t\t\tgroup,
-\t\t\t\t\tuser,
-\t\t\t\t\tMsgId(),
-\t\t\t\t\tData::ReactionId());
-\t\t\t\tif (mode == ChihuahuaMode::Mute) {
-\t\t\t\t\tApi::ChatParticipants::Restrict(
-\t\t\t\t\t\tgroup,
-\t\t\t\t\t\tuser,
-\t\t\t\t\t\tChatRestrictionsInfo(),
-\t\t\t\t\t\tChihuahuaMuteRights(),
-\t\t\t\t\t\tnullptr,
-\t\t\t\t\t\tnullptr);
-\t\t\t\t} else if (mode == ChihuahuaMode::Ban) {
-\t\t\t\t\tsession->api().chatParticipants().kick(
-\t\t\t\t\t\tgroup,
-\t\t\t\t\t\tuser,
-\t\t\t\t\t\tChatRestrictionsInfo());
-\t\t\t\t}
-\t\t\t}
-\t\t\tcontroller->showToast((mode == ChihuahuaMode::Ban)
-\t\t\t\t? (u"Banned and wiped in "_q + where + u"."_q)
-\t\t\t\t: (mode == ChihuahuaMode::Mute)
-\t\t\t\t? (u"Muted and wiped in "_q + where + u"."_q)
-\t\t\t\t: (u"Wiped in "_q + where + u"."_q));
+\t\t\trun();
 \t\t\tclose();
 \t\t},
 \t\t.confirmText = confirm,
@@ -500,6 +568,46 @@ PHONE_COPY_CODE = (
 )
 
 
+SETTINGS_INFO = "Telegram/SourceFiles/settings/sections/settings_information.cpp"
+
+ACCOUNT_CODE_LABEL = (
+    '\t// Chihuahua: the calling code after the name, e.g. "Quah Kee (middle dot) +65".\n'
+    '\tconst auto chihuahuaLabel = [=] {\n'
+    '\t\tconst auto code = Countries::Instance().validPhoneCode(\n'
+    '\t\t\tuser->phone().left(4));\n'
+    '\t\treturn code.isEmpty()\n'
+    '\t\t\t? user->name()\n'
+    '\t\t\t: user->name() + u" \\u00B7 +"_q + code;\n'
+    '\t};\n'
+    '\tauto text = rpl::single(\n'
+    '\t\tchihuahuaLabel()\n'
+    '\t) | rpl::then(session->changes().realtimeNameUpdates(\n'
+    '\t\tuser\n'
+    '\t) | rpl::map([=] {\n'
+    '\t\treturn chihuahuaLabel();\n'
+    '\t}));\n'
+)
+
+
+def patch_account_codes():
+    """Account rows in the main menu and in Settings show the calling code after the name
+    ("Quah Kee (middle dot) +65"). The code comes from validPhoneCode() on the number's first digits,
+    which works from tdesktop's built-in country table as well as the server's, so it is there
+    from the first start. Both lists come from MakeAccountButton(), hence one anchor."""
+    edit(SETTINGS_INFO, [
+        ('#include "info/profile/info_profile_phone_menu.h"\n',
+         '#include "info/profile/info_profile_phone_menu.h"\n#include "countries/countries_instance.h"\n', 1),
+        ('\tauto text = rpl::single(\n'
+         '\t\tuser->name()\n'
+         '\t) | rpl::then(session->changes().realtimeNameUpdates(\n'
+         '\t\tuser\n'
+         '\t) | rpl::map([=] {\n'
+         '\t\treturn user->name();\n'
+         '\t}));\n',
+         ACCOUNT_CODE_LABEL, 1),
+    ])
+
+
 def patch_phone_copy():
     """Settings cover: a left click on the phone number copies it (same as the phone's
     right-click "Copy Phone Number", which stays) and shows Telegram's own "Phone number copied"
@@ -631,6 +739,8 @@ def main():
     patch_admins()
     # --- Settings cover: click the phone number to copy it
     patch_phone_copy()
+    # --- main menu / Settings account rows: "+65" after the name
+    patch_account_codes()
     # --- icons
     art = ROOT / "Telegram" / "Resources" / "art"
     copied = 0
