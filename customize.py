@@ -982,6 +982,7 @@ def patch_theme98():
     patch_add_account_button()
     patch_sync_contacts_off()
     patch_enter_proceeds()
+    patch_stay_on_settings()
     patch_account_phone_line()
     patch_account_order()
     patch_group_age_badge()
@@ -1343,6 +1344,49 @@ def patch_enter_proceeds():
          "                    return true;\n"
          "                }\n"
          "                if (i == EditorInfo.IME_ACTION_DONE || i == EditorInfo.IME_ACTION_NEXT || chihuahuaEnterPressed(i, keyEvent)) {\n", 1),
+    ])
+
+
+def patch_stay_on_settings():
+    """Switching accounts from the Accounts card keeps you on the Settings tab. switchToAccount()
+    rebuilds the tab screen from scratch and MainTabsActivity always opens on Chats; the Settings
+    tab now hands it a MainTabsActivity told to open on position 2 (Settings) instead. Accounts
+    that show the Calls tab in that slot still start on Chats."""
+    ui = "TMessagesProj/src/main/java/org/telegram/ui/"
+    edit(ui + "ViewPagerActivity.java", [
+        ("    private int initialFragmentPosition = -1;\n",
+         "    private int initialFragmentPosition = -1;\n\n"
+         "    // Chihuahua: lets a caller choose the page the screen opens on.\n"
+         "    public void setInitialFragmentPosition(int position) {\n"
+         "        initialFragmentPosition = position;\n"
+         "    }\n", 1),
+    ])
+    edit(ui + "MainTabsActivity.java", [
+        ("    public MainTabsActivity() {\n        super();\n",
+         "    // Chihuahua: open on the Settings tab (after switching accounts from it).\n"
+         "    public void chihuahuaStartOnSettings() {\n"
+         "        if (!getUserConfig().showCallsTab) {\n"
+         "            setInitialFragmentPosition(POSITION_CALLS_OR_SETTINGS);\n"
+         "        }\n"
+         "    }\n\n"
+         "    public MainTabsActivity() {\n        super();\n", 1),
+    ])
+    edit(ui + "SettingsActivity.java", [
+        ("            if (LaunchActivity.instance != null) {\n"
+         "                LaunchActivity.instance.switchToAccount(account, true);\n"
+         "            }\n"
+         "            return;\n"
+         "        } else if (item.instanceOf(SettingsSearchCell.Factory.class)) {\n",
+         "            if (LaunchActivity.instance != null) {\n"
+         "                // Chihuahua: come back to this tab, not Chats.\n"
+         "                LaunchActivity.instance.switchToAccount(account, true, obj -> {\n"
+         "                    final MainTabsActivity tabs = new MainTabsActivity();\n"
+         "                    tabs.chihuahuaStartOnSettings();\n"
+         "                    return tabs;\n"
+         "                });\n"
+         "            }\n"
+         "            return;\n"
+         "        } else if (item.instanceOf(SettingsSearchCell.Factory.class)) {\n", 1),
     ])
 
 
