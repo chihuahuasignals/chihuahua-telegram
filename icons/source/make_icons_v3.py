@@ -5,7 +5,7 @@ Windows 98 title-bar colours of the Chihuahua 98 theme — with the dog's head p
 the ears breaking out over the bubble's rim.  Everything is drawn from the soft-edged cut-out
 (cutout_u2net.png) at 2048 px and downsampled, so every size is crisp.
 
-Usage: python3 make_icons_v3.py [outdir]        (default: the icons/ folder next to source/)
+Usage: python3 make_icons_v3.py [one|two] [outdir]   ("one" -> icons/, "two" -> icons2/)
 Writes the same file set the build expects: background-*/foreground-* (adaptive icon layers),
 launcher-*/launcher_round-* (legacy 48 dp icons), dr-*.webp, preview.png.
 """
@@ -17,7 +17,31 @@ from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 from scipy import ndimage
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "..")
+
+# ---- which dog -----------------------------------------------------------------------------------
+# One entry per app. The two dogs are shaped differently — a fluffy pomeranian-ish head whose ear
+# tufts stand up, and a papillon-ish head with long ears that hang out sideways — so each gets its
+# own scale, its own place on the canvas and its own idea of where the head may cross the rim.
+PROFILES = {
+    "one": dict(                       # Chihuahua Telegram
+        file="cutout_u2net.png",
+        scale=0.0555,                  # dp per source pixel
+        anchor=(600, 632),             # source px that sits between the eyes
+        at=(55.0, 51.0),               # ...placed here on the 108 dp canvas
+        above=45.0,                    # above this line the dog may leave the bubble
+        reach=1.2, fade=2.6,           # dp past the outline at full strength, then fading out
+        out="..",
+    ),
+    "two": dict(                       # Chihuahua 2
+        file="cutout2_u2net.png",
+        scale=0.058,
+        anchor=(667, 474),
+        at=(55.0, 46.5),
+        above=0.0,                     # long ears that hang out sideways: a chopped-off ear looks
+        reach=1.2, fade=2.6,           # wrong, so this head stays inside the rim, no overflow
+        out="../../icons2",
+    ),
+}
 
 # ---- palette (Chihuahua 98: navy title bar -> bright blue) --------------------------------------
 BG_TOP = (0x0B, 0x1F, 0x8E)        # deep navy, top-left
@@ -32,20 +56,30 @@ CX, CY, R = 55.0, 53.0, 28.5       # bubble circle
 STROKE_W = 2.3
 TAIL_TIP = (31.2, 76.8)            # inside the safe circle (dist from (54,54) = 32.3 < 33)
 TAIL_ANGLES = (118.0, 154.0)       # where the tail meets the circle (degrees, y down)
-DOG_SCALE = 0.0555                 # dp per source pixel
-DOG_ANCHOR = (600, 632)            # source px placed at DOG_AT: between the eyes
-DOG_AT = (55.0, 51.0)
-OVERFLOW_ABOVE = CY - 8            # above this line the dog may leave the bubble (the ears)
-OVERFLOW_REACH = 1.2               # dp the ears may extend past the outline at full strength
-OVERFLOW_FADE = 2.6                # ...then fade to nothing over this many dp
+DOG_FILE = DOG_SCALE = DOG_ANCHOR = DOG_AT = DOG_OUT = None
+OVERFLOW_ABOVE = OVERFLOW_REACH = OVERFLOW_FADE = None
 
 _dog = None
+
+
+def use_profile(name):
+    """Switch which chihuahua (and which icons/ folder) the generator works with."""
+    global DOG_FILE, DOG_SCALE, DOG_ANCHOR, DOG_AT, DOG_OUT, _dog
+    global OVERFLOW_ABOVE, OVERFLOW_REACH, OVERFLOW_FADE
+    p = PROFILES[name]
+    DOG_FILE, DOG_SCALE, DOG_ANCHOR = p["file"], p["scale"], p["anchor"]
+    DOG_AT, DOG_OUT = p["at"], p["out"]
+    OVERFLOW_ABOVE, OVERFLOW_REACH, OVERFLOW_FADE = p["above"], p["reach"], p["fade"]
+    _dog = None
+
+
+use_profile("one")
 
 
 def dog():
     global _dog
     if _dog is None:
-        im = Image.open(os.path.join(HERE, "cutout_u2net.png")).convert("RGBA")
+        im = Image.open(os.path.join(HERE, DOG_FILE)).convert("RGBA")
         alpha = im.getchannel("A")
         # de-fringe: the half-transparent fur strands along the cut-out edge still carry the
         # grey of the photo's background; give them the colour of the nearest solid fur instead
@@ -238,6 +272,10 @@ DENS = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
 
 
 def main():
+    profile = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] in PROFILES else "one"
+    use_profile(profile)
+    args = [a for a in sys.argv[1:] if a not in PROFILES]
+    OUT = args[0] if args else os.path.join(HERE, DOG_OUT)
     os.makedirs(OUT, exist_ok=True)
     bg_master = background(MASTER)
     fg_master = bubble(MASTER)
@@ -265,7 +303,7 @@ def main():
     dark.alpha_composite(masked(vis, "squircle").resize((96, 96), Image.LANCZOS), (136, 144))
     pv.alpha_composite(dark, (1284, 0))
     pv.convert("RGB").save(f"{OUT}/preview.png")
-    print("v3 ->", OUT, len(os.listdir(OUT)), "files")
+    print(f"v3 [{profile}] ->", OUT, len(os.listdir(OUT)), "files")
 
 
 if __name__ == "__main__":

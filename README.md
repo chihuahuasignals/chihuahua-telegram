@@ -30,6 +30,15 @@ Your own build of Telegram for Android with the account limit raised (32 account
 Nothing else in Telegram is changed. Built on GitHub's servers from the official
 [DrKLO/Telegram](https://github.com/DrKLO/Telegram) source (GPL v2).
 
+## Two apps
+
+Every build produces **two** APKs from the same code: `ChihuahuaTelegram-….apk` and
+`Chihuahua2-….apk`. They differ only in the application id (`com.chihuahua.messenger` and
+`com.chihuahua.messenger2`), the name and the icon — a different one of the two dogs — so Android
+treats them as separate apps and installs them side by side: 32 accounts each, their own
+notifications, their own settings. Install one or both; they update independently from the same
+release. `config.env` holds the second app's name, id and icon folder (`APP2_*`).
+
 ## Get the APK
 
 1. Open the **Actions** tab. A yellow dot = building (1–3 hours), green tick = done, red cross = failed.
@@ -68,7 +77,11 @@ Edit `config.env` on GitHub (pencil icon), commit, and a new build starts automa
 - `TELEGRAM_COMMIT` — which Telegram version to build. To update to a newer Telegram, put the newest
   commit id from https://github.com/DrKLO/Telegram/commits/master here. If Telegram moved things
   around, the build fails with a clear "anchor found 0x" message in `customize.py` — that needs a small fix.
-- `icons/` — the launcher icon: the real chihuahua inside a chat bubble on the theme's navy-to-blue. `icons/source/make_icons_v3.py` regenerates the Android set from `cutout_u2net.png` (the background-removed photo) and `make_desktop_icons.py` the Windows set; the older sunset-sticker design is still there as `make_icons_v2.py`.
+- `icons/` and `icons2/` — the launcher icons: each dog inside a chat bubble on the theme's navy-to-blue.
+  `icons/source/make_icons_v3.py one|two` regenerates a set from that dog's background-removed photo
+  (`cutout_u2net.png`, `cutout2_u2net.png`) — scale, framing and how far the ears may cross the rim are
+  per-dog settings in its `PROFILES` table. `make_desktop_icons.py` builds the Windows set from dog one;
+  the older sunset-sticker design is still there as `make_icons_v2.py`.
 
 You can also press **Actions → Build Android APK → Run workflow** to rebuild without changing anything.
 

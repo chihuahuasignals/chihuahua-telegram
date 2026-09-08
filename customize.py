@@ -30,7 +30,7 @@ from pathlib import Path
 
 ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else "telegram").resolve()
 HERE = Path(__file__).resolve().parent
-ICONS = HERE / "icons"
+ICONS = HERE / os.environ.get("ICONS_DIR", "icons").strip()
 
 APP_NAME = os.environ.get("APP_NAME", "Chihuahua Telegram").strip()
 APP_PACKAGE = os.environ.get("APP_PACKAGE", "com.chihuahua.messenger").strip()
@@ -41,6 +41,9 @@ TG_API_ID = os.environ.get("TG_API_ID", "").strip()
 TG_API_HASH = os.environ.get("TG_API_HASH", "").strip()
 KEYSTORE_PASSWORD = os.environ.get("KEYSTORE_PASSWORD", "").strip()
 KEYSTORE_ALIAS = os.environ.get("KEYSTORE_ALIAS", "chihuahua").strip()
+# The chat list shows this in place of Telegram's wordmark: the app name without a trailing
+# "Telegram", so "Chihuahua Telegram" -> "Chihuahua" and "Chihuahua 2" stays as it is.
+CHAT_LIST_TITLE = re.sub(r"\s*Telegram$", "", APP_NAME).strip() or APP_NAME
 ACTIVATION_CODE = os.environ.get("ACTIVATION_CODE", "").strip()
 
 DENSITIES = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
@@ -87,6 +90,11 @@ def edit(relpath, replacements):
         text = text.replace(old, new)
     path.write_text(text, encoding="utf-8")
     print(f"  ok  {relpath}")
+
+
+def java_escape(s):
+    """For a Java string literal (the app name reaching source code, not resources)."""
+    return s.replace("\\", "\\\\").replace('"', '\\"')
 
 
 def xml_escape(s):
@@ -966,7 +974,7 @@ def patch_theme98():
     edit("TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java", [
         ('                SpannableStringBuilder ssb = new SpannableStringBuilder(getString(R.string.AppName));\n'
          '                ssb.setSpan(new ImageSpan(logoDrawable), 0, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);\n',
-         '                SpannableStringBuilder ssb = new SpannableStringBuilder("Chihuahua");\n', 1),
+         '                SpannableStringBuilder ssb = new SpannableStringBuilder("' + java_escape(CHAT_LIST_TITLE) + '");\n', 1),
     ])
     patch_glass_header()
     patch_dialogs_header_icons()

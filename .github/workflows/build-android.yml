@@ -9,6 +9,7 @@ on:
       - customize.py
       - patches/**
       - icons/**
+      - icons2/**
       - .github/workflows/build-android.yml
 
 permissions:
@@ -26,6 +27,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 355
 
+    # Two apps out of the same source: same features, different application id, so Android
+    # installs them side by side. Both jobs publish into one release.
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - id: one
+            second: false
+            status_branch: build-status
+          - id: two
+            second: true
+            status_branch: build-status-2
+
+    name: Build APK (app ${{ matrix.app.id }})
+
     steps:
       - name: Check out this repository
         uses: actions/checkout@v4
@@ -33,12 +49,21 @@ jobs:
       - name: Load config.env
         run: |
           set -euo pipefail
-          grep -E '^[A-Z_]+=' config.env >> "$GITHUB_ENV"
-          echo "Loaded:"; grep -E '^[A-Z_]+=' config.env
+          grep -E '^[A-Z0-9_]+=' config.env >> "$GITHUB_ENV"
+          echo "Loaded:"; grep -E '^[A-Z0-9_]+=' config.env
           # Smaller runners (private repos) have 7 GB RAM — shrink the Gradle heap there.
           TOTAL_GB=$(free -g | awk '/Mem:/{print $2}')
           echo "Runner RAM: ${TOTAL_GB} GB, CPUs: $(nproc)"
           if [ "$TOTAL_GB" -lt 12 ]; then echo "GRADLE_HEAP=5g" >> "$GITHUB_ENV"; fi
+          # The second app takes its name, application id and icons from the APP2_* settings.
+          if [ "${{ matrix.app.second }}" = "true" ]; then
+            {
+              echo "APP_NAME=$(grep -m1 '^APP2_NAME=' config.env | cut -d= -f2-)"
+              echo "APP_PACKAGE=$(grep -m1 '^APP2_PACKAGE=' config.env | cut -d= -f2-)"
+              echo "ICONS_DIR=$(grep -m1 '^APP2_ICONS=' config.env | cut -d= -f2-)"
+            } >> "$GITHUB_ENV"
+            echo "Building the second app."
+          fi
 
       - name: Check repository secrets
         env:
@@ -124,16 +149,18 @@ jobs:
           VERSION=$(grep '^APP_VERSION_NAME=' telegram/gradle.properties | cut -d= -f2)
           SAFE_NAME=$(echo "$APP_NAME" | tr -cd '[:alnum:]')
           NAME="${SAFE_NAME}-${VERSION}-${BUILD_ABI}.apk"
+          SUMS="SHA256SUMS-${SAFE_NAME}.txt"
           mkdir -p out && cp "$APK" "out/$NAME"
-          sha256sum "out/$NAME" | tee out/SHA256SUMS.txt
+          (cd out && sha256sum "$NAME" | tee "$SUMS")
           ls -la out
           echo "apk=out/$NAME" >> "$GITHUB_OUTPUT"
+          echo "sums=out/$SUMS" >> "$GITHUB_OUTPUT"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           {
             echo "### APK built"
             echo "- File: **$NAME** ($(du -h "out/$NAME" | cut -f1))"
-            echo "- SHA-256: \`$(cut -d' ' -f1 out/SHA256SUMS.txt)\`"
+            echo "- SHA-256: \`$(cut -d' ' -f1 "out/$SUMS")\`"
             echo "- Download it from the **Releases** page of this repository."
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -150,10 +177,17 @@ jobs:
         run: |
           set -euo pipefail
           TAG="v${{ steps.collect.outputs.version }}-build${{ github.run_number }}"
-          gh release create "$TAG" "${{ steps.collect.outputs.apk }}" out/SHA256SUMS.txt \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "$APP_NAME ${{ steps.collect.outputs.version }} (build ${{ github.run_number }})" \
-            --notes "Telegram ${{ steps.collect.outputs.version }} source, commit ${TELEGRAM_COMMIT:0:10}. Max accounts: ${MAX_ACCOUNTS}. ABI: ${BUILD_ABI}. Open this page on your phone and tap the .apk to install."
+          # Both apps land in the same release. The two jobs finish minutes apart, so the first
+          # one here creates the release and the other just uploads into it.
+          for i in $(seq 1 30); do
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then break; fi
+            if gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+                 --title "Chihuahua ${{ steps.collect.outputs.version }} (build ${{ github.run_number }})" \
+                 --notes "Two apps from the same code, install both side by side: ChihuahuaTelegram-*.apk and Chihuahua2-*.apk. Telegram ${{ steps.collect.outputs.version }} source, commit ${TELEGRAM_COMMIT:0:10}. Max accounts: ${MAX_ACCOUNTS} each. ABI: ${BUILD_ABI}. Open this page on your phone and tap an .apk to install."; then break; fi
+            sleep 5
+          done
+          gh release upload "$TAG" "${{ steps.collect.outputs.apk }}" "${{ steps.collect.outputs.sums }}" \
+            --repo "$GITHUB_REPOSITORY" --clobber
           echo "Release: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
           echo "- Release page: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
 
@@ -161,7 +195,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: build-log
+          name: build-log-${{ matrix.app.id }}
           path: build.log
           if-no-files-found: ignore
 
@@ -172,12 +206,13 @@ jobs:
         run: |
           set +e
           mkdir -p status && cd status
-          git init -q && git checkout -q -b build-status
+          git init -q && git checkout -q -b ${{ matrix.app.status_branch }}
           {
             echo "result=${{ job.status }}"
             echo "run=${{ github.run_number }}"
             echo "run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo "commit=${{ github.sha }}"
+            echo "app=${{ matrix.app.id }}"
             echo "apk=${{ steps.collect.outputs.name }}"
             echo "version=${{ steps.collect.outputs.version }}"
             echo "finished=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -188,5 +223,5 @@ jobs:
           fi
           git add -A
           git -c user.name=build-bot -c user.email=build-bot@users.noreply.github.com commit -q -m "build ${{ github.run_number }}: ${{ job.status }}"
-          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" build-status
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ${{ matrix.app.status_branch }}
           echo "status recorded: ${{ job.status }}"
