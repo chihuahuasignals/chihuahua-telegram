@@ -990,6 +990,7 @@ def patch_theme98():
     patch_add_account_button()
     patch_sync_contacts_off()
     patch_enter_proceeds()
+    patch_profile_qr_icon()
     patch_contacts_select_all()
     patch_stay_on_settings()
     patch_account_phone_line()
@@ -1318,6 +1319,19 @@ def patch_sync_contacts_off():
          "    private boolean syncContacts = false; // Chihuahua: off unless ticked\n", 1),
         ('            syncContacts = savedInstanceState.getInt("syncContacts", 1) == 1;\n',
          '            syncContacts = savedInstanceState.getInt("syncContacts", 0) == 1;\n', 1),
+    ])
+
+
+def patch_profile_qr_icon():
+    """The QR button on a profile's username row is tinted with actionBarDefaultIcon — white in this
+    theme, because that colour is meant for the navy title bar — but the button sits on a light card
+    in the list, so it was invisible. Tint it like every other icon on a white card instead."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java", [
+        ("                        Drawable drawable = ContextCompat.getDrawable(detailCell.getContext(), R.drawable.header_qr_24);\n"
+         "                        drawable.setColorFilter(new PorterDuffColorFilter(dontApplyPeerColor(getThemedColor(Theme.key_actionBarDefaultIcon), false), PorterDuff.Mode.MULTIPLY));\n",
+         "                        Drawable drawable = ContextCompat.getDrawable(detailCell.getContext(), R.drawable.header_qr_24);\n"
+         "                        // Chihuahua: this one is on a white card, not on the action bar.\n"
+         "                        drawable.setColorFilter(new PorterDuffColorFilter(dontApplyPeerColor(getThemedColor(Theme.key_windowBackgroundWhiteGrayIcon), false), PorterDuff.Mode.MULTIPLY));\n", 1),
     ])
 
 
