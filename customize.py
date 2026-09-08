@@ -990,6 +990,7 @@ def patch_theme98():
     patch_add_account_button()
     patch_sync_contacts_off()
     patch_enter_proceeds()
+    patch_no_phonebook_invites()
     patch_profile_qr_icon()
     patch_contacts_select_all()
     patch_stay_on_settings()
@@ -1319,6 +1320,24 @@ def patch_sync_contacts_off():
          "    private boolean syncContacts = false; // Chihuahua: off unless ticked\n", 1),
         ('            syncContacts = savedInstanceState.getInt("syncContacts", 1) == 1;\n',
          '            syncContacts = savedInstanceState.getInt("syncContacts", 0) == 1;\n', 1),
+    ])
+
+
+def patch_no_phonebook_invites():
+    """No "Invite Friends" list on the Contacts tab. Telegram reads the phone's own address book and
+    lists everyone in it who is not on Telegram, which on a phone with a business address book is a
+    long list of strangers' numbers under the contacts. The adapter now reads an empty phone book,
+    so the invite section and its header disappear; the rest of the screen (including Recent calls,
+    and Telegram's own invite screen if you go looking for it) is untouched."""
+    ca = "TMessagesProj/src/main/java/org/telegram/ui/Adapters/ContactsAdapter.java"
+    edit(ca, [
+        ("    private final boolean needPhonebook;\n",
+         "    private final boolean needPhonebook;\n"
+         "    /** Chihuahua: the device address book, hidden — see chihuahuaPhoneBook(). */\n"
+         "    private static final ArrayList<ContactsController.Contact> CHIHUAHUA_NO_PHONEBOOK = new ArrayList<>();\n", 1),
+        # every read of the phone book goes through the empty list instead
+        ("ContactsController.getInstance(currentAccount).phoneBookContacts",
+         "CHIHUAHUA_NO_PHONEBOOK", 10),
     ])
 
 

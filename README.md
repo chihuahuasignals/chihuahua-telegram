@@ -12,6 +12,7 @@ Your own build of Telegram for Android with the account limit raised (32 account
 - Tapping an account in that card switches to it and stays on the Settings tab (Telegram jumps to Chats).
 - **Add Account** at the bottom of the Accounts card on the Settings tab, just above Account.
 - **Sync Contacts** is unticked by default when adding an account (tick it yourself if you want it).
+- No **Invite Friends** list on the Contacts tab. Telegram lists everyone in the phone's own address book who is not on Telegram; this build shows only real Telegram contacts.
 - The QR button on a profile's username row is grey instead of white (Telegram tints it for the title bar, so on this theme's light cards it was invisible).
 - A **select-all** tick in the Contacts tab's selection bar: long-press one contact, tap the tick and every contact of that account is selected (not just the ones on screen), then Delete. Telegram's own confirmation and undo still apply.
 - The Administrators list shows one line of each admin's bio where Telegram shows "Promoted by …" (admins without a bio keep that text).
