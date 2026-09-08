@@ -990,6 +990,7 @@ def patch_theme98():
     patch_add_account_button()
     patch_sync_contacts_off()
     patch_enter_proceeds()
+    patch_contacts_select_all()
     patch_stay_on_settings()
     patch_account_phone_line()
     patch_account_order()
@@ -1317,6 +1318,61 @@ def patch_sync_contacts_off():
          "    private boolean syncContacts = false; // Chihuahua: off unless ticked\n", 1),
         ('            syncContacts = savedInstanceState.getInt("syncContacts", 1) == 1;\n',
          '            syncContacts = savedInstanceState.getInt("syncContacts", 0) == 1;\n', 1),
+    ])
+
+
+def patch_contacts_select_all():
+    """A "select all" tick in the Contacts tab's selection bar. Telegram lets you tick contacts one
+    by one and delete them; with hundreds of contacts that is not a way to empty the list. The tick
+    selects every contact of the account (not only the rows on screen) and the existing Delete
+    button then does the rest, with Telegram's own confirmation and its undo bulletin."""
+    ca = "TMessagesProj/src/main/java/org/telegram/ui/ContactsActivity.java"
+    edit(ca, [
+        ("    private final static int delete = 100;\n",
+         "    private final static int delete = 100;\n"
+         "    private final static int chihuahua_select_all = 101; // Chihuahua: tick every contact\n", 1),
+        ("        actionMode.addItemWithWidth(delete, R.drawable.msg_delete, dp(54), getString(R.string.Delete));\n",
+         "        actionMode.addItemWithWidth(chihuahua_select_all, R.drawable.msg_select, dp(54), \"Select all\");\n"
+         "        actionMode.addItemWithWidth(delete, R.drawable.msg_delete, dp(54), getString(R.string.Delete));\n", 1),
+        ("                } else if (id == delete) {\n                    performSelectedContactsDelete();\n",
+         "                } else if (id == chihuahua_select_all) {\n"
+         "                    chihuahuaSelectAllContacts();\n"
+         "                } else if (id == delete) {\n                    performSelectedContactsDelete();\n", 1),
+        ("    private void hideActionMode() {\n",
+         "    /** Chihuahua: put every contact of this account into the selection, then tick what is on screen. */\n"
+         "    private void chihuahuaSelectAllContacts() {\n"
+         "        final ArrayList<TLRPC.TL_contact> all = getContactsController().contacts;\n"
+         "        for (int a = 0; a < all.size(); a++) {\n"
+         "            final TLRPC.User user = getMessagesController().getUser(all.get(a).user_id);\n"
+         "            if (user != null && !UserObject.isUserSelf(user) && selectedContacts.indexOfKey(user.id) < 0) {\n"
+         "                selectedContacts.put(user.id, user);\n"
+         "            }\n"
+         "        }\n"
+         "        if (selectedContacts.isEmpty()) {\n"
+         "            return;\n"
+         "        }\n"
+         "        if (!actionBar.isActionModeShowed()) {\n"
+         "            if (fragmentView != null) {\n"
+         "                AndroidUtilities.hideKeyboard(fragmentView.findFocus());\n"
+         "            }\n"
+         "            actionBar.showActionMode();\n"
+         "            backDrawable.setRotation(1, true);\n"
+         "        }\n"
+         "        selectedContactsCountTextView.setNumber(selectedContacts.size(), true);\n"
+         "        // rows further down read the same map when they are bound, so only the visible ones\n"
+         "        // need to be ticked by hand\n"
+         "        for (int i = 0; i < listView.getChildCount(); i++) {\n"
+         "            final View view = listView.getChildAt(i);\n"
+         "            if (view instanceof UserCell) {\n"
+         "                final UserCell cell = (UserCell) view;\n"
+         "                cell.setChecked(selectedContacts.indexOfKey(cell.getDialogId()) >= 0, true);\n"
+         "            } else if (view instanceof ProfileSearchCell) {\n"
+         "                final ProfileSearchCell cell = (ProfileSearchCell) view;\n"
+         "                cell.setChecked(selectedContacts.indexOfKey(cell.getDialogId()) >= 0, true);\n"
+         "            }\n"
+         "        }\n"
+         "    }\n\n"
+         "    private void hideActionMode() {\n", 1),
     ])
 
 
