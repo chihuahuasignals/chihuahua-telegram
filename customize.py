@@ -819,7 +819,8 @@ def patch_settings_and_toggles():
     src = ROOT / "TMessagesProj/src/main/java/org/telegram"
     import hashlib
     activation_hash = hashlib.sha256(("chihuahua:" + ACTIVATION_CODE).encode("utf-8")).hexdigest() if ACTIVATION_CODE else ""
-    for name, sub in (("ChihuahuaConfig.java", "messenger"), ("ChihuahuaSettingsActivity.java", "ui")):
+    for name, sub in (("ChihuahuaConfig.java", "messenger"), ("ChihuahuaSettingsActivity.java", "ui"),
+                      ("ChihuahuaSetupActivity.java", "ui")):
         p = HERE / "patches" / name
         if not p.exists():
             fail(f"missing {p}")
@@ -994,6 +995,7 @@ def patch_theme98():
     patch_profile_qr_icon()
     patch_contacts_select_all()
     patch_stay_on_settings()
+    patch_setup_tab()
     patch_account_phone_line()
     patch_account_order()
     patch_group_age_badge()
@@ -1484,6 +1486,61 @@ def patch_stay_on_settings():
          "            }\n"
          "            return;\n"
          "        } else if (item.instanceOf(SettingsSearchCell.Factory.class)) {\n", 1),
+    ])
+
+
+def patch_setup_tab():
+    """Replaces the Contacts tab with the Setup page (ChihuahuaSetupActivity): bio, username,
+    birthday, two-step verification, session self-destruct and the three privacy rules on one
+    screen. The contact list moves to a row inside that page, and to the tab's long-press menu."""
+    ui = "TMessagesProj/src/main/java/org/telegram/ui/"
+    # GlassTabView's label is set from a string resource; this build needs a plain string.
+    edit(ui + "Components/glass/GlassTabView.java", [
+        ("    public static GlassTabView createMainTab(Context context, Theme.ResourcesProvider resourcesProvider, "
+         "TabAnimation tabAnimation, @StringRes int stringRes) {\n",
+         "    // Chihuahua: rename a tab after it is built.\n"
+         "    public void chihuahuaSetLabel(CharSequence text) {\n"
+         "        textView.setText(text);\n"
+         "    }\n\n"
+         "    public static GlassTabView createMainTab(Context context, Theme.ResourcesProvider resourcesProvider, "
+         "TabAnimation tabAnimation, @StringRes int stringRes) {\n", 1),
+    ])
+    contacts_tab = ("        tabs[INDEX_CONTACTS] = GlassTabView.createMainTab(context, resourceProvider, "
+                    "GlassTabView.TabAnimation.CONTACTS, R.string.MainTabsContacts);\n")
+    badge = ("            if (Build.VERSION.SDK_INT >= 23 && UserConfig.getInstance(currentAccount).syncContacts "
+             "&& !hasPermission && MessagesController.getGlobalNotificationsSettings().getBoolean(\"askAboutContacts2\", true)) {\n"
+             "                tabs[INDEX_CONTACTS].setCounter(\"!\", true, true);\n"
+             "            } else {\n"
+             "                tabs[INDEX_CONTACTS].setCounter(null, true, true);\n"
+             "            }\n")
+    old_fragment = ("        if (position == POSITION_CONTACTS) {\n"
+                    "            Bundle args = new Bundle();\n"
+                    "            args.putBoolean(\"needPhonebook\", true);\n"
+                    "            args.putBoolean(\"needFinishFragment\", false);\n"
+                    "            args.putBoolean(\"hasMainTabs\", true);\n"
+                    "            return new ContactsActivity(args);\n")
+    selector = ("        o.add(R.drawable.msg_contact_add, getString(R.string.NewContact), () -> {\n"
+                "            new NewContactBottomSheet(this, getContext()).show();\n"
+                "        });\n")
+    edit(ui + "MainTabsActivity.java", [
+        (contacts_tab,
+         "        tabs[INDEX_CONTACTS] = GlassTabView.createMainTab(context, resourceProvider, "
+         "GlassTabView.TabAnimation.CHECKLIST, R.string.MainTabsContacts);\n"
+         "        tabs[INDEX_CONTACTS].chihuahuaSetLabel(\"Setup\");\n", 1),
+        # The "!" badge asked for contacts permission; the tab is not the contact list any more.
+        (badge, "            tabs[INDEX_CONTACTS].setCounter(null, true, true);\n", 1),
+        (old_fragment,
+         "        if (position == POSITION_CONTACTS) {\n"
+         "            Bundle args = new Bundle();\n"
+         "            args.putBoolean(\"hasMainTabs\", true);\n"
+         "            return new ChihuahuaSetupActivity(args);\n", 1),
+        # Long-press the tab: the contact list is still one press away.
+        (selector,
+         "        o.add(R.drawable.msg_contacts, getString(R.string.Contacts), () -> {\n"
+         "            Bundle args = new Bundle();\n"
+         "            args.putBoolean(\"needPhonebook\", true);\n"
+         "            presentFragment(new ContactsActivity(args));\n"
+         "        });\n" + selector, 1),
     ])
 
 

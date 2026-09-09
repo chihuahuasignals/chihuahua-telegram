@@ -12,9 +12,18 @@ Your own build of Telegram for Android with the account limit raised (32 account
 - Tapping an account in that card switches to it and stays on the Settings tab (Telegram jumps to Chats).
 - **Add Account** at the bottom of the Accounts card on the Settings tab, just above Account.
 - **Sync Contacts** is unticked by default when adding an account (tick it yourself if you want it).
-- No **Invite Friends** list on the Contacts tab. Telegram lists everyone in the phone's own address book who is not on Telegram; this build shows only real Telegram contacts.
+- The Contacts tab is a **Setup** tab instead: the nine settings worth touching on a freshly logged-in
+  account, on one page, each changed where it stands — **Bio** and **Username** (typed in, with the
+  same live "is it taken" check Telegram does, saved with the ✓ at the top), **Birthday**,
+  **Two-Step Verification**, **Terminate old sessions if inactive for**, and the privacy of
+  **Last Seen & Online**, **Date of Birth** and **Invites** (Everybody / My Contacts / Nobody), plus
+  **Delete my account if away for**. Telegram spreads these over three screens and up to four taps
+  each. Everything but Two-Step Verification applies the moment you pick it; exception lists you have
+  set for a privacy rule are kept. The contact list is still there — a **Contacts** row at the bottom
+  of the page, and on a long press of the tab.
+- No **Invite Friends** list on the Contacts screen. Telegram lists everyone in the phone's own address book who is not on Telegram; this build shows only real Telegram contacts.
 - The QR button on a profile's username row is grey instead of white (Telegram tints it for the title bar, so on this theme's light cards it was invisible).
-- A **select-all** tick in the Contacts tab's selection bar: long-press one contact, tap the tick and every contact of that account is selected (not just the ones on screen), then Delete. Telegram's own confirmation and undo still apply.
+- A **select-all** tick in the contact list's selection bar: long-press one contact, tap the tick and every contact of that account is selected (not just the ones on screen), then Delete. Telegram's own confirmation and undo still apply.
 - The Administrators list shows one line of each admin's bio where Telegram shows "Promoted by …" (admins without a bio keep that text).
 - The button row on a group profile is **Message · Mute · Admins · Recent Actions** (Telegram's Video Chat, Add Story and Leave are gone; Leave is still in the ⋮ menu). On a channel it is **Mute · Invite Links · Recent Actions** (no Live Stream or Add Story). Admin buttons only appear where you have the rights.
 - Long-press a message in a group you moderate for three one-item actions, instead of Telegram's
