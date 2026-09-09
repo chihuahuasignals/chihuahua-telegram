@@ -202,14 +202,14 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
         items.add(SettingsActivity.SettingCell.Factory.of(
             ID_DELETE_TTL, IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom, R.drawable.msg_delete,
             "Delete my account", "if away for", deleteTtlValue()));
-        items.add(UItem.asShadow("Two-Step Verification asks for a password as well as the SMS code when this account signs in somewhere new. The other two are Telegram's own timers: a session nobody uses is logged out, and an account nobody comes back to is deleted."));
+        items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader("Your info"));
         items.add(SettingsActivity.SettingCell.Factory.of(
             ID_BIRTHDAY, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.filled_birthday,
             LocaleController.getString(R.string.ContactBirthday), null,
             birthday == null ? LocaleController.getString(R.string.AddBirthday) : UserInfoActivity.birthdayString(birthday)));
-        items.add(UItem.asShadow("Saved as soon as you pick it. Who can see it is Date of Birth below."));
+        items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader("Privacy"));
         items.add(SettingsActivity.SettingCell.Factory.of(
@@ -221,13 +221,13 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
         items.add(SettingsActivity.SettingCell.Factory.of(
             ID_PRIVACY_INVITES, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.msg_groups,
             LocaleController.getString(R.string.PrivacyInvites), null, privacyValue(ContactsController.PRIVACY_RULES_TYPE_INVITE)));
-        items.add(UItem.asShadow("Each applies the moment you pick it. Invites decides who may add this account to groups and channels. Exception lists you have already set are kept."));
+        items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader("More"));
         items.add(SettingsActivity.SettingCell.Factory.of(
             ID_CONTACTS, IconBackgroundColors.GRAY.top, IconBackgroundColors.GRAY.bottom, R.drawable.msg_contacts,
             LocaleController.getString(R.string.Contacts)));
-        items.add(UItem.asShadow("The contact list this tab used to hold. Everything else is in the Settings tab."));
+        items.add(UItem.asShadow(null));
     }
 
     private void onClick(UItem item, View view, int position, float x, float y) {
