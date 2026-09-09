@@ -839,7 +839,8 @@ def patch_settings_and_toggles():
     on_create = "    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n"
     edit("TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java", [
         (on_resume, on_resume + "        chihuahuaCheckActivation();\n"
-                   "        org.telegram.messenger.ChihuahuaConfig.applyKeepConnected();\n", 1),
+                   "        org.telegram.messenger.ChihuahuaConfig.applyKeepConnected();\n"
+                   "        org.telegram.messenger.ChihuahuaConfig.retryTtlDefaults();\n", 1),
         (on_create, ACTIVATION_GATE + on_create, 1),
     ])
     lang_item = ("        items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, "
@@ -1002,6 +1003,7 @@ def patch_theme98():
     patch_contacts_select_all()
     patch_stay_on_settings()
     patch_setup_tab()
+    patch_account_ttl_defaults()
     patch_account_phone_line()
     patch_account_order()
     patch_group_age_badge()
@@ -1492,6 +1494,17 @@ def patch_stay_on_settings():
          "            }\n"
          "            return;\n"
          "        } else if (item.instanceOf(SettingsSearchCell.Factory.class)) {\n", 1),
+    ])
+
+
+def patch_account_ttl_defaults():
+    """Every account that logs in on this build is set once to Telegram's longest self-destruct
+    choices: sessions 1 year, account 24 months. onAuthSuccess is the one funnel every login path
+    (code, password, QR, sign-up) goes through."""
+    anchor = "        needFinishActivity(afterSignup, res.setup_password_required, res.otherwise_relogin_days);\n"
+    edit("TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java", [
+        (anchor,
+         "        org.telegram.messenger.ChihuahuaConfig.onAccountLoggedIn(currentAccount);\n" + anchor, 1),
     ])
 
 

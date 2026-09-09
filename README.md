@@ -26,6 +26,11 @@ Your own build of Telegram for Android with the account limit raised (32 account
   each. Everything but Two-Step Verification applies the moment you pick it; exception lists you have
   set for a privacy rule are kept. The contact list is still there — a **Contacts** row at the bottom
   of the page, and on a long press of the tab.
+- Every account that logs in is set once to Telegram's longest self-destruct choices — **sessions
+  1 year**, **account 24 months** — instead of Telegram's 6 and 18. Once per account: change either
+  by hand on its Setup tab afterwards and it stays changed. Accounts that were already logged in are
+  left alone until **Settings → Chihuahua → New accounts → Apply to every account now** (which
+  spaces the calls out), and the whole thing switches off there too.
 - No **Invite Friends** list on the Contacts screen. Telegram lists everyone in the phone's own address book who is not on Telegram; this build shows only real Telegram contacts.
 - The QR button on a profile's username row is grey instead of white (Telegram tints it for the title bar, so on this theme's light cards it was invisible).
 - A **select-all** tick in the contact list's selection bar: long-press one contact, tap the tick and every contact of that account is selected (not just the ones on screen), then Delete. Telegram's own confirmation and undo still apply.

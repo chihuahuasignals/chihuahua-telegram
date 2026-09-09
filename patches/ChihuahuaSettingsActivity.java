@@ -13,6 +13,7 @@ import android.widget.FrameLayout;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.ChihuahuaConfig;
 import org.telegram.messenger.NotificationsController;
+import org.telegram.messenger.R;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.UserConfig;
 import org.telegram.tgnet.TLRPC;
@@ -21,6 +22,7 @@ import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.BackDrawable;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.UItem;
 import org.telegram.ui.Components.UniversalAdapter;
@@ -45,6 +47,8 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
     private static final int ID_NOTIF_STATUS = 24;
     private static final int ID_BATTERY = 25;
     private static final int ID_AGE_ALWAYS = 21;
+    private static final int ID_LONG_TTL = 26;
+    private static final int ID_TTL_ALL = 27;
     /** Threshold rows use ID_MONTHS_BASE + months. */
     private static final int ID_MONTHS_BASE = 200;
     private static final int[] MONTH_CHOICES = {1, 3, 6, 12};
@@ -100,6 +104,15 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
             }
         }
         items.add(UItem.asShadow("In group chats the sender's estimated account age appears next to their name, where Telegram shows the admin label. Accounts under the threshold are red. Handy for spotting throwaway accounts posting promos \u2014 the estimate comes from the user ID, so it works even when the profile is empty."));
+
+        items.add(UItem.asHeader("New accounts"));
+        items.add(UItem.asCheck(ID_LONG_TTL, "Sessions 1 year, account 24 months").setChecked(ChihuahuaConfig.longTtlDefaults()));
+        int ttlPending = ChihuahuaConfig.ttlAccountsPending();
+        if (ttlPending > 0) {
+            items.add(UItem.asButton(ID_TTL_ALL, "Apply to every account now",
+                    ttlPending + (ttlPending == 1 ? " account" : " accounts")));
+        }
+        items.add(UItem.asShadow("Telegram logs a session out after 6 months unused and deletes an account after 18 months away. Each account that logs in from now on is set once to the longest Telegram offers — both are on its Setup tab and change either by hand and it stays changed. Accounts already logged in are untouched until you press the button."));
 
         int activated = 0;
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
@@ -184,6 +197,12 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
             }
             return;
         }
+        if (item.id == ID_TTL_ALL) {
+            ChihuahuaConfig.applyTtlDefaultsToAll();
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.contact_check,
+                    "Setting every account to 1 year and 24 months").show();
+            return;
+        }
         if (item.id == ID_NOTIF_STATUS) {
             ChihuahuaConfig.applyKeepConnected();
             if (listView != null && listView.adapter != null) {
@@ -235,6 +254,8 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
                 key = ChihuahuaConfig.KEY_FLAG_NEW;
             } else if (item.id == ID_AGE_ALWAYS) {
                 key = ChihuahuaConfig.KEY_AGE_ALWAYS;
+            } else if (item.id == ID_LONG_TTL) {
+                key = ChihuahuaConfig.KEY_LONG_TTL;
             } else {
                 return;
             }

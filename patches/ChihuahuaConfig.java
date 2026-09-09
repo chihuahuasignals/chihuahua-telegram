@@ -29,6 +29,7 @@ public class ChihuahuaConfig {
     public static final String KEY_QUICK_BAN = "quick_ban";
     public static final String KEY_KEEP_CONNECTED = "keep_connected";
     public static final String KEY_AGE_ALWAYS = "age_always_in_groups";
+    public static final String KEY_LONG_TTL = "long_ttl";
     /** Not a switch: months, stored separately (see flagMonths()). */
     public static final String KEY_FLAG_MONTHS = "flag_new_months";
 
@@ -49,6 +50,7 @@ public class ChihuahuaConfig {
     private static boolean quickBan = true;
     private static boolean keepConnected = true;
     private static boolean ageAlways = false;
+    private static boolean longTtl = true;
     private static int flagMonths = 3;
 
     private static SharedPreferences prefs() {
@@ -76,6 +78,7 @@ public class ChihuahuaConfig {
             quickBan = p.getBoolean(KEY_QUICK_BAN, true);
             keepConnected = p.getBoolean(KEY_KEEP_CONNECTED, true);
             ageAlways = p.getBoolean(KEY_AGE_ALWAYS, false);
+            longTtl = p.getBoolean(KEY_LONG_TTL, true);
             flagMonths = p.getInt(KEY_FLAG_MONTHS, 3);
             loaded = true;
         }
@@ -405,6 +408,163 @@ public class ChihuahuaConfig {
         }
         return push + "\nKeep-alive service: " + (keepAlive ? "on" : "OFF")
                 + "\nBackground connection: " + connected + " of " + accounts + " accounts";
+    }
+
+    // ---- session and account self-destruct ------------------------------------------------------
+    // Telegram logs a session out after 6 months unused and deletes an account after 18 months
+    // away. With this many accounts, most of them idle most of the time, that is tight, so each
+    // account that logs in here is set once to the longest Telegram offers: sessions 1 year,
+    // account 24 months. Once per account, keyed by user id — change either by hand afterwards
+    // and it sticks, because the app never sets it a second time. Accounts that were already
+    // logged in are left alone until the "Apply to every account" button in Settings is pressed.
+
+    /** Telegram's longest choices, in days. */
+    public static final int SESSION_TTL_DAYS = 365;
+    public static final int ACCOUNT_TTL_DAYS = 730;
+
+    public static boolean longTtlDefaults() {
+        load();
+        return longTtl;
+    }
+
+    private static String sessionTtlKey(long userId) {
+        return "ttl_session_" + userId;
+    }
+
+    private static String accountTtlKey(long userId) {
+        return "ttl_account_" + userId;
+    }
+
+    /** Set while an account's two calls have not both gone through, so a start can finish them. */
+    private static String ttlPendingKey(long userId) {
+        return "ttl_pending_" + userId;
+    }
+
+    /** Called the moment an account finishes logging in on this build. */
+    public static void onAccountLoggedIn(int account) {
+        load();
+        if (!longTtl || ApplicationLoader.applicationContext == null) {
+            return;
+        }
+        try {
+            final long userId = UserConfig.getInstance(account).getClientUserId();
+            if (userId == 0) {
+                return;
+            }
+            prefs().edit().putBoolean(ttlPendingKey(userId), true).apply();
+            // A couple of seconds in, so the fresh connection has settled.
+            AndroidUtilities.runOnUIThread(() -> applyTtlDefaults(account, false), 2000);
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+    }
+
+    /** On every start: finish any account whose login-time calls did not get through. */
+    public static void retryTtlDefaults() {
+        load();
+        if (!longTtl || ApplicationLoader.applicationContext == null) {
+            return;
+        }
+        try {
+            final SharedPreferences p = prefs();
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                final UserConfig config = UserConfig.getInstance(a);
+                if (!config.isClientActivated()) {
+                    continue;
+                }
+                final long userId = config.getClientUserId();
+                if (userId != 0 && p.getBoolean(ttlPendingKey(userId), false)) {
+                    applyTtlDefaults(a, false);
+                }
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+    }
+
+    /** The Settings button: every logged-in account, spaced out so it is not one burst. */
+    public static void applyTtlDefaultsToAll() {
+        int delay = 0;
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (!UserConfig.getInstance(a).isClientActivated()) {
+                continue;
+            }
+            final int account = a;
+            AndroidUtilities.runOnUIThread(() -> applyTtlDefaults(account, true), delay);
+            delay += 1500;
+        }
+    }
+
+    /**
+     * Sets both TTLs on one account. Each half is marked done only when the server accepts it, so
+     * a call lost to a dead connection is retried on the next start. force = the Settings button,
+     * which ignores the marks and sets them again.
+     */
+    private static void applyTtlDefaults(int account, boolean force) {
+        if (ApplicationLoader.applicationContext == null) {
+            return;
+        }
+        try {
+            final UserConfig config = UserConfig.getInstance(account);
+            if (!config.isClientActivated()) {
+                return;
+            }
+            final long userId = config.getClientUserId();
+            if (userId == 0) {
+                return;
+            }
+            final SharedPreferences p = prefs();
+            if (force || !p.getBoolean(sessionTtlKey(userId), false)) {
+                final TL_account.setAuthorizationTTL req = new TL_account.setAuthorizationTTL();
+                req.authorization_ttl_days = SESSION_TTL_DAYS;
+                org.telegram.tgnet.ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
+                    if (error == null) {
+                        prefs().edit().putBoolean(sessionTtlKey(userId), true).apply();
+                        clearTtlPending(userId);
+                    }
+                });
+            }
+            if (force || !p.getBoolean(accountTtlKey(userId), false)) {
+                final TL_account.setAccountTTL req = new TL_account.setAccountTTL();
+                req.ttl = new TLRPC.TL_accountDaysTTL();
+                req.ttl.days = ACCOUNT_TTL_DAYS;
+                org.telegram.tgnet.ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
+                    if (error == null) {
+                        prefs().edit().putBoolean(accountTtlKey(userId), true).apply();
+                        clearTtlPending(userId);
+                    }
+                });
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+    }
+
+    private static void clearTtlPending(long userId) {
+        final SharedPreferences p = prefs();
+        if (p.getBoolean(sessionTtlKey(userId), false) && p.getBoolean(accountTtlKey(userId), false)) {
+            p.edit().remove(ttlPendingKey(userId)).apply();
+        }
+    }
+
+    /** How many logged-in accounts still have neither TTL set — for the Settings line. */
+    public static int ttlAccountsPending() {
+        if (ApplicationLoader.applicationContext == null) {
+            return 0;
+        }
+        final SharedPreferences p = prefs();
+        int pending = 0;
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            final UserConfig config = UserConfig.getInstance(a);
+            if (!config.isClientActivated()) {
+                continue;
+            }
+            final long userId = config.getClientUserId();
+            if (userId != 0 && !(p.getBoolean(sessionTtlKey(userId), false) && p.getBoolean(accountTtlKey(userId), false))) {
+                pending++;
+            }
+        }
+        return pending;
     }
 
     // ---- per-account notifications -----------------------------------------------------------
