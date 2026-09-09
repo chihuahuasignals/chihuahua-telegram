@@ -21,6 +21,7 @@ import org.telegram.messenger.R;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.ConnectionsManager;
+import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_account;
 import org.telegram.ui.ActionBar.ActionBar;
@@ -56,8 +57,13 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
     private static final int ID_PRIVACY_INVITES = 6;
     private static final int ID_DELETE_TTL = 7;
     private static final int ID_CONTACTS = 8;
+    private static final int ID_PROMO_GROUP = 9;
 
     private static final int done_button = 1;
+
+    /** A group promoted at the top of this page; set from config.env. Empty = no row. */
+    private static final String PROMO_GROUP = "%%PROMO_GROUP%%";
+    private static final String PROMO_TITLE = "%%PROMO_TITLE%%";
 
     /** Sessions self-destruct, in days, in the order the picker shows them. */
     private static final int[] SESSION_TTL_DAYS = {7, 90, 183, 365};
@@ -242,6 +248,13 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
     /* ------------------------------------------------------------------ the page */
 
     private void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
+        if (!PROMO_GROUP.isEmpty()) {
+            items.add(SettingsActivity.SettingCell.Factory.of(
+                ID_PROMO_GROUP, IconBackgroundColors.BLUE_DEEP.top, IconBackgroundColors.BLUE_DEEP.bottom, R.drawable.msg_discussion,
+                promoName(), promoSubtitle(), promoJoined() ? "Open" : null));
+            items.add(UItem.asShadow(null));
+        }
+
         items.add(UItem.asHeader("Your info"));
         items.add(UItem.asCustom(bioEdit));
         items.add(UItem.asCustom(usernameEdit));
@@ -310,7 +323,40 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
             final Bundle args = new Bundle();
             args.putBoolean("needPhonebook", true);
             presentFragment(new ContactsActivity(args));
+        } else if (item.id == ID_PROMO_GROUP) {
+            // Opens the group; joining is Telegram's own button at the bottom of the chat.
+            getMessagesController().openByUserName(PROMO_GROUP, this, 1);
         }
+    }
+
+    /* ------------------------------------------------------------------ the promoted group */
+
+    /** The group's chat object, when this account already has it cached. */
+    private TLRPC.Chat promoChat() {
+        if (PROMO_GROUP.isEmpty()) {
+            return null;
+        }
+        final TLObject object = getMessagesController().getUserOrChat(PROMO_GROUP);
+        return object instanceof TLRPC.Chat ? (TLRPC.Chat) object : null;
+    }
+
+    private String promoName() {
+        final TLRPC.Chat chat = promoChat();
+        return chat != null && !TextUtils.isEmpty(chat.title) ? chat.title : PROMO_TITLE;
+    }
+
+    private String promoSubtitle() {
+        final TLRPC.Chat chat = promoChat();
+        if (chat != null && chat.participants_count > 0) {
+            return LocaleController.formatPluralStringComma("Members", chat.participants_count);
+        }
+        return "@" + PROMO_GROUP;
+    }
+
+    /** Only true when this account is known to be in the group — never guesses the other way. */
+    private boolean promoJoined() {
+        final TLRPC.Chat chat = promoChat();
+        return chat != null && !chat.left && !chat.kicked;
     }
 
     /* ------------------------------------------------------------------ bio and username */

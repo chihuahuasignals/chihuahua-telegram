@@ -2,6 +2,11 @@
 
 Your own build of Telegram for Android with the account limit raised (32 accounts instead of 3) plus:
 
+- A row at the top of the Setup tab for a group of your choice — **SG Massage Chit Chat** here.
+  Tapping it opens the group; joining is Telegram's own button at the bottom of the chat, so nobody
+  is signed up to anything without pressing it. `config.env` sets which group (`PROMO_GROUP`,
+  `PROMO_TITLE`); clear `PROMO_GROUP` and the row is gone.
+
 - **Add to Group**, **Copy ID** and **Ban from all my groups** in every user's profile menu (⋮).
 - **Admins** in a group or channel's ⋮ menu — the full admin list in one tap, in any group you are in, not just ones you manage (Telegram only offers this through Manage Group, which needs admin rights).
 - The estimated month the account was created shown next to their online status in profiles (worked out from the ID), and the user's ID on its own row below — tap it to copy. Both switchable.
@@ -44,7 +49,7 @@ Nothing else in Telegram is changed. Built on GitHub's servers from the official
 
 ## Two apps
 
-Every build produces **two** APKs from the same code: `ChihuahuaTelegram-….apk` and
+Every build produces **two** APKs from the same code: `Chihuahua1-….apk` and
 `Chihuahua2-….apk`. They differ only in the application id (`com.chihuahua.messenger` and
 `com.chihuahua.messenger2`), the name and the icon — a different one of the two dogs — so Android
 treats them as separate apps and installs them side by side: 32 accounts each, their own
@@ -125,7 +130,9 @@ and 32-account limit, from `desktop/customize_desktop.py`. The third-party libra
 a Release app cannot link against the Debug-only libraries Telegram's own CI builds) take ~2-3 hours to
 compile the first time and are then cached; a run that compiled them stops there and automatically starts
 a second run, which produces the app from the cached libraries in ~1-2 hours.
-Releases are tagged `desktop-v…`; unzip and run the .exe (portable, data in `%APPDATA%\Chihuahua Telegram`).
+Releases are tagged `desktop-v…`; unzip and run the .exe (portable, data in `%APPDATA%\Chihuahua 1`).
+The data folder is named after the app, so an existing install must have `%APPDATA%\Chihuahua Telegram`
+renamed to `%APPDATA%\Chihuahua 1` before the renamed .exe is first run, or it starts logged out.
 
 The desktop build has the name, icon, 32-account limit and the same three moderation items on a
 message's right-click menu — **Ban, wipe & report**, **Mute, wipe & report**, **Wipe & report** —

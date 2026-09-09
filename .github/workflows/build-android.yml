@@ -182,7 +182,7 @@ jobs:
             if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then break; fi
             if gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
                  --title "Chihuahua ${{ steps.collect.outputs.version }} (build ${{ github.run_number }})" \
-                 --notes "Two apps from the same code, install both side by side: ChihuahuaTelegram-*.apk and Chihuahua2-*.apk. Telegram ${{ steps.collect.outputs.version }} source, commit ${TELEGRAM_COMMIT:0:10}. Max accounts: ${MAX_ACCOUNTS} each. ABI: ${BUILD_ABI}. Open this page on your phone and tap an .apk to install."; then break; fi
+                 --notes "Two apps from the same code, install both side by side: Chihuahua1-*.apk and Chihuahua2-*.apk. Telegram ${{ steps.collect.outputs.version }} source, commit ${TELEGRAM_COMMIT:0:10}. Max accounts: ${MAX_ACCOUNTS} each. ABI: ${BUILD_ABI}. Open this page on your phone and tap an .apk to install."; then break; fi
             sleep 5
           done
           gh release upload "$TAG" "${{ steps.collect.outputs.apk }}" "${{ steps.collect.outputs.sums }}" \

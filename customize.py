@@ -32,7 +32,7 @@ ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else "telegram").resolve()
 HERE = Path(__file__).resolve().parent
 ICONS = HERE / os.environ.get("ICONS_DIR", "icons").strip()
 
-APP_NAME = os.environ.get("APP_NAME", "Chihuahua Telegram").strip()
+APP_NAME = os.environ.get("APP_NAME", "Chihuahua 1").strip()
 APP_PACKAGE = os.environ.get("APP_PACKAGE", "com.chihuahua.messenger").strip()
 MAX_ACCOUNTS = int(os.environ.get("MAX_ACCOUNTS", "32"))
 BUILD_ABI = os.environ.get("BUILD_ABI", "arm64-v8a").strip()
@@ -45,6 +45,9 @@ KEYSTORE_ALIAS = os.environ.get("KEYSTORE_ALIAS", "chihuahua").strip()
 # "Telegram", so "Chihuahua Telegram" -> "Chihuahua" and "Chihuahua 2" stays as it is.
 CHAT_LIST_TITLE = re.sub(r"\s*Telegram$", "", APP_NAME).strip() or APP_NAME
 ACTIVATION_CODE = os.environ.get("ACTIVATION_CODE", "").strip()
+# A group promoted by a row at the top of the Setup tab. Empty username = no row.
+PROMO_GROUP = os.environ.get("PROMO_GROUP", "").strip().lstrip("@")
+PROMO_TITLE = os.environ.get("PROMO_TITLE", "").strip() or ("@" + PROMO_GROUP if PROMO_GROUP else "")
 
 DENSITIES = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
 
@@ -825,7 +828,10 @@ def patch_settings_and_toggles():
         if not p.exists():
             fail(f"missing {p}")
             continue
-        text = p.read_text(encoding="utf-8").replace("%%ACTIVATION_HASH%%", activation_hash)
+        text = (p.read_text(encoding="utf-8")
+                .replace("%%ACTIVATION_HASH%%", activation_hash)
+                .replace("%%PROMO_GROUP%%", java_escape(PROMO_GROUP))
+                .replace("%%PROMO_TITLE%%", java_escape(PROMO_TITLE)))
         (src / sub / name).write_text(text, encoding="utf-8")
     print("  ok  Chihuahua settings classes copied" + (" (activation lock ON)" if activation_hash else " (no activation code set)"))
     # Activation gate: LaunchActivity asks for the code once per device when a code is compiled in.

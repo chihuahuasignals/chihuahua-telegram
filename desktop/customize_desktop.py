@@ -5,7 +5,7 @@ customize_desktop.py — turns a clean Telegram Desktop (tdesktop) checkout into
 Run by the GitHub Actions workflow:   python customize_desktop.py <path-to-tdesktop-checkout>
 
 Settings (environment):
-  APP_NAME       window/app name, also the data folder %APPDATA%\\<APP_NAME>   (default: Chihuahua Telegram)
+  APP_NAME       window/app name, also the data folder %APPDATA%\\<APP_NAME>   (default: Chihuahua 1)
   MAX_ACCOUNTS   accounts the app can hold                                    (default: 32)
 
 api_id / api_hash are passed to CMake by the workflow (TDESKTOP_API_ID / TDESKTOP_API_HASH), not here.
@@ -24,7 +24,7 @@ ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else "tdesktop").resolve()
 HERE = Path(__file__).resolve().parent
 ICONS = HERE.parent / "icons" / "desktop"
 
-APP_NAME = os.environ.get("APP_NAME", "Chihuahua Telegram").strip()
+APP_NAME = os.environ.get("APP_NAME", "Chihuahua 1").strip()
 MAX_ACCOUNTS = int(os.environ.get("MAX_ACCOUNTS", "32"))
 APP_FILE = "".join(ch for ch in APP_NAME if ch.isalnum()) or "Chihuahua"
 # Stable, unique AppUserModelID / installer id so Windows never confuses this app with the official one.
