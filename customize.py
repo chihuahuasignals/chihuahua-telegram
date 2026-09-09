@@ -1526,7 +1526,8 @@ def patch_account_ttl_defaults():
     anchor = "        needFinishActivity(afterSignup, res.setup_password_required, res.otherwise_relogin_days);\n"
     edit("TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java", [
         (anchor,
-         "        org.telegram.messenger.ChihuahuaConfig.onAccountLoggedIn(currentAccount);\n" + anchor, 1),
+         "        org.telegram.messenger.ChihuahuaConfig.onAccountLoggedIn(currentAccount);\n"
+         "        ChihuahuaOnboarding.afterLogin(currentAccount);\n" + anchor, 1),
     ])
 
 
