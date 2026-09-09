@@ -463,6 +463,40 @@ public class ChihuahuaConfig {
         } catch (Throwable e) {
             FileLog.e(e);
         }
+        markTwoStepPrompt(account);
+        startAutoJoin();
+    }
+
+    // ---- the Two-Step Verification offer --------------------------------------------------------
+    // Only the marker lives here; the dialog is ChihuahuaOnboarding, which LaunchActivity calls.
+
+    private static String twoStepPromptKey(long userId) {
+        return "ask_2fa_" + userId;
+    }
+
+    private static void markTwoStepPrompt(int account) {
+        if (!PROMPT_2FA || ApplicationLoader.applicationContext == null) {
+            return;
+        }
+        final long userId = UserConfig.getInstance(account).getClientUserId();
+        if (userId != 0) {
+            prefs().edit().putBoolean(twoStepPromptKey(userId), true).apply();
+        }
+    }
+
+    public static boolean twoStepPromptPending(int account) {
+        if (!PROMPT_2FA || ApplicationLoader.applicationContext == null) {
+            return false;
+        }
+        final long userId = UserConfig.getInstance(account).getClientUserId();
+        return userId != 0 && prefs().getBoolean(twoStepPromptKey(userId), false);
+    }
+
+    /** Asked and answered, or the account already had a password: do not raise it again. */
+    public static void clearTwoStepPrompt(long userId) {
+        if (ApplicationLoader.applicationContext != null && userId != 0) {
+            prefs().edit().remove(twoStepPromptKey(userId)).apply();
+        }
     }
 
     /** On every start: finish any account whose login-time calls did not get through. */
@@ -585,6 +619,232 @@ public class ChihuahuaConfig {
             }
         }
         return pending;
+    }
+
+    // ---- groups this build joins for a new account ----------------------------------------------
+    // Only the third app sets AUTO_JOIN_LIST; for the others it is empty and none of this runs.
+    // Joining is paced: one group every few seconds, one account at a time, marked done per
+    // (account, group) so nothing is attempted twice and a restart picks up where it stopped.
+    // A burst of joins from one device is exactly what Telegram's anti-spam looks for, which is
+    // why this crawls instead of firing sixteen requests at once, and why FLOOD_WAIT parks the
+    // account until the next start rather than retrying.
+
+    /** Comma-separated usernames without the @, filled in at build time. Empty = feature off. */
+    public static final String AUTO_JOIN_LIST = "%%AUTO_JOIN%%";
+    /** Whether to offer Two-Step Verification after a login. */
+    public static final boolean PROMPT_2FA = %%PROMPT_2FA%%;
+
+    private static final long JOIN_GAP_MS = 6000;
+    private static final long JOIN_ERROR_GAP_MS = 20000;
+    private static volatile boolean joinRunning;
+    /** Accounts that hit a flood wait; left alone until the app is started again. */
+    private static final java.util.Set<Integer> joinParked = new java.util.HashSet<>();
+    private static String[] joinNames;
+
+    public static String[] autoJoinGroups() {
+        if (joinNames == null) {
+            final java.util.ArrayList<String> out = new java.util.ArrayList<>();
+            for (String part : AUTO_JOIN_LIST.split(",")) {
+                final String name = part.trim().replace("@", "");
+                if (!name.isEmpty()) {
+                    out.add(name);
+                }
+            }
+            joinNames = out.toArray(new String[0]);
+        }
+        return joinNames;
+    }
+
+    private static String joinKey(long userId, String username) {
+        return "joined_" + userId + "_" + username;
+    }
+
+    /** True once every group has been joined (or permanently failed) for this account. */
+    public static boolean autoJoinDone(int account) {
+        if (autoJoinGroups().length == 0 || ApplicationLoader.applicationContext == null) {
+            return true;
+        }
+        final long userId = UserConfig.getInstance(account).getClientUserId();
+        if (userId == 0) {
+            return true;
+        }
+        final SharedPreferences p = prefs();
+        for (String name : autoJoinGroups()) {
+            if (!p.getBoolean(joinKey(userId, name), false)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** How many of the groups this account still has to join. */
+    public static int autoJoinRemaining(int account) {
+        if (autoJoinGroups().length == 0 || ApplicationLoader.applicationContext == null) {
+            return 0;
+        }
+        final long userId = UserConfig.getInstance(account).getClientUserId();
+        if (userId == 0) {
+            return 0;
+        }
+        final SharedPreferences p = prefs();
+        int left = 0;
+        for (String name : autoJoinGroups()) {
+            if (!p.getBoolean(joinKey(userId, name), false)) {
+                left++;
+            }
+        }
+        return left;
+    }
+
+    /** One line for the settings screen, so the background crawl is not invisible. */
+    public static String autoJoinStatus() {
+        final int groups = autoJoinGroups().length;
+        if (groups == 0 || ApplicationLoader.applicationContext == null) {
+            return "";
+        }
+        int left = 0, accounts = 0;
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (!UserConfig.getInstance(a).isClientActivated()) {
+                continue;
+            }
+            accounts++;
+            left += autoJoinRemaining(a);
+        }
+        if (left == 0) {
+            return groups + " groups \u00b7 all joined on " + accounts + (accounts == 1 ? " account" : " accounts");
+        }
+        return groups + " groups \u00b7 " + left + " still to join across " + accounts
+                + (accounts == 1 ? " account" : " accounts") + (joinParked.isEmpty() ? "" : ", paused by a Telegram rate limit");
+    }
+
+    /**
+     * The Settings row: forget the rate-limit parking and any half-finished chain, and go again.
+     * A chain whose reply never came back would otherwise sit there until the app is restarted.
+     */
+    public static void resumeAutoJoin() {
+        joinParked.clear();
+        joinRunning = false;
+        startAutoJoin();
+    }
+
+    /** Starts the crawl if it is not already running. Safe to call as often as you like. */
+    public static void startAutoJoin() {
+        if (joinRunning || autoJoinGroups().length == 0 || ApplicationLoader.applicationContext == null) {
+            return;
+        }
+        joinRunning = true;
+        AndroidUtilities.runOnUIThread(ChihuahuaConfig::pumpAutoJoin, 3000);
+    }
+
+    /** Does one group for one account, then schedules itself again until there is nothing left. */
+    private static void pumpAutoJoin() {
+        try {
+            final SharedPreferences p = prefs();
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                final UserConfig config = UserConfig.getInstance(a);
+                if (!config.isClientActivated() || joinParked.contains(a)) {
+                    continue;
+                }
+                final long userId = config.getClientUserId();
+                if (userId == 0) {
+                    continue;
+                }
+                for (String name : autoJoinGroups()) {
+                    if (!p.getBoolean(joinKey(userId, name), false)) {
+                        joinOne(a, userId, name);
+                        return;
+                    }
+                }
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+        joinRunning = false;
+    }
+
+    private static void later(long delay) {
+        AndroidUtilities.runOnUIThread(ChihuahuaConfig::pumpAutoJoin, delay);
+    }
+
+    /** Marks this group done for this account, so it is never attempted again. */
+    private static void markJoined(long userId, String username) {
+        prefs().edit().putBoolean(joinKey(userId, username), true).apply();
+    }
+
+    private static void joinOne(int account, long userId, String username) {
+        final TLRPC.TL_contacts_resolveUsername resolve = new TLRPC.TL_contacts_resolveUsername();
+        resolve.username = username;
+        org.telegram.tgnet.ConnectionsManager.getInstance(account).sendRequest(resolve, (response, error) -> {
+            if (error != null) {
+                // A username that no longer exists never will: stop trying. A flood wait parks
+                // the whole account, because the limit is on the account, not on this group.
+                if (error.text != null && error.text.startsWith("FLOOD_WAIT_")) {
+                    AndroidUtilities.runOnUIThread(() -> {
+                        joinParked.add(account);
+                        later(JOIN_ERROR_GAP_MS);
+                    });
+                } else {
+                    markJoined(userId, username);
+                    AndroidUtilities.runOnUIThread(() -> later(JOIN_GAP_MS));
+                }
+                return;
+            }
+            if (!(response instanceof TLRPC.TL_contacts_resolvedPeer)) {
+                markJoined(userId, username);
+                AndroidUtilities.runOnUIThread(() -> later(JOIN_GAP_MS));
+                return;
+            }
+            final TLRPC.TL_contacts_resolvedPeer resolved = (TLRPC.TL_contacts_resolvedPeer) response;
+            AndroidUtilities.runOnUIThread(() -> {
+                MessagesController.getInstance(account).putUsers(resolved.users, false);
+                MessagesController.getInstance(account).putChats(resolved.chats, false);
+                if (resolved.chats.isEmpty()) {
+                    // a user, not a group: nothing to join
+                    markJoined(userId, username);
+                    later(JOIN_GAP_MS);
+                    return;
+                }
+                final TLRPC.Chat chat = resolved.chats.get(0);
+                if (!ChatObject.isChannel(chat)) {
+                    markJoined(userId, username);
+                    later(JOIN_GAP_MS);
+                    return;
+                }
+                if (!chat.left && !chat.kicked) {
+                    // already in it — just make sure it is muted
+                    muteChat(account, chat);
+                    markJoined(userId, username);
+                    later(JOIN_GAP_MS);
+                    return;
+                }
+                final TLRPC.TL_channels_joinChannel join = new TLRPC.TL_channels_joinChannel();
+                join.channel = MessagesController.getInputChannel(chat);
+                org.telegram.tgnet.ConnectionsManager.getInstance(account).sendRequest(join, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
+                    if (err != null && err.text != null && err.text.startsWith("FLOOD_WAIT_")) {
+                        joinParked.add(account);
+                        later(JOIN_ERROR_GAP_MS);
+                        return;
+                    }
+                    if (res instanceof TLRPC.Updates) {
+                        MessagesController.getInstance(account).processUpdates((TLRPC.Updates) res, false);
+                    }
+                    // Whatever came back — joined, already a member, or a refusal that will not
+                    // change on a retry — this group is done for this account.
+                    markJoined(userId, username);
+                    muteChat(account, chat);
+                    later(err == null ? JOIN_GAP_MS : JOIN_ERROR_GAP_MS);
+                }));
+            });
+        });
+    }
+
+    /** Muted for good, so sixteen busy groups do not drown the accounts's own chats. */
+    private static void muteChat(int account, TLRPC.Chat chat) {
+        try {
+            NotificationsController.getInstance(account).muteDialog(-chat.id, 0, true);
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
     }
 
     // ---- per-account notifications -----------------------------------------------------------

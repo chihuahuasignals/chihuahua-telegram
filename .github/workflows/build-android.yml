@@ -10,6 +10,7 @@ on:
       - patches/**
       - icons/**
       - icons2/**
+      - icons3/**
       - .github/workflows/build-android.yml
 
 permissions:
@@ -26,18 +27,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 355
 
-    # Two apps out of the same source: same features, different application id, so Android
-    # installs them side by side. Both jobs publish into one release.
+    # Three apps out of the same source: different application id, so Android installs them
+    # side by side. Every APP<n>_ setting in config.env overrides the plain one for that app,
+    # which is how they differ at all. All jobs publish into one release.
     strategy:
       fail-fast: false
       matrix:
         app:
           - id: one
-            second: false
+            prefix: ''
             status_branch: build-status
           - id: two
-            second: true
+            prefix: APP2_
             status_branch: build-status-2
+          - id: three
+            prefix: APP3_
+            status_branch: build-status-3
 
     name: Build APK (app ${{ matrix.app.id }})
 
@@ -54,14 +59,23 @@ jobs:
           TOTAL_GB=$(free -g | awk '/Mem:/{print $2}')
           echo "Runner RAM: ${TOTAL_GB} GB, CPUs: $(nproc)"
           if [ "$TOTAL_GB" -lt 12 ]; then echo "GRADLE_HEAP=5g" >> "$GITHUB_ENV"; fi
-          # The second app takes its name, application id and icons from the APP2_* settings.
-          if [ "${{ matrix.app.second }}" = "true" ]; then
-            {
-              echo "APP_NAME=$(grep -m1 '^APP2_NAME=' config.env | cut -d= -f2-)"
-              echo "APP_PACKAGE=$(grep -m1 '^APP2_PACKAGE=' config.env | cut -d= -f2-)"
-              echo "ICONS_DIR=$(grep -m1 '^APP2_ICONS=' config.env | cut -d= -f2-)"
-            } >> "$GITHUB_ENV"
-            echo "Building the second app."
+          # Apps after the first take their name, id, icons and features from APP<n>_* settings.
+          # A setting the prefix does not define keeps the plain value, so adding a per-app
+          # override to config.env is all it takes to make one app differ.
+          PREFIX='${{ matrix.app.prefix }}'
+          if [ -n "$PREFIX" ]; then
+            for KEY in NAME PACKAGE ICONS PROMPT_2FA AUTO_JOIN; do
+              LINE=$(grep -m1 "^${PREFIX}${KEY}=" config.env || true)
+              [ -z "$LINE" ] && continue
+              case "$KEY" in
+                ICONS) OUT=ICONS_DIR ;;
+                NAME|PACKAGE) OUT="APP_$KEY" ;;
+                *) OUT="$KEY" ;;
+              esac
+              echo "$OUT=${LINE#*=}" >> "$GITHUB_ENV"
+              echo "  $OUT <- ${PREFIX}${KEY}"
+            done
+            echo "Building app ${{ matrix.app.id }} from ${PREFIX}* settings."
           fi
 
       - name: Check repository secrets
@@ -182,7 +196,7 @@ jobs:
             if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then break; fi
             if gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
                  --title "Chihuahua ${{ steps.collect.outputs.version }} (build ${{ github.run_number }})" \
-                 --notes "Two apps from the same code, install both side by side: Chihuahua1-*.apk and Chihuahua2-*.apk. Telegram ${{ steps.collect.outputs.version }} source, commit ${TELEGRAM_COMMIT:0:10}. Max accounts: ${MAX_ACCOUNTS} each. ABI: ${BUILD_ABI}. Open this page on your phone and tap an .apk to install."; then break; fi
+                 --notes "Three apps from the same code, install any or all side by side: Chihuahua1-*.apk, Chihuahua2-*.apk and Chihuahua3-*.apk. Telegram ${{ steps.collect.outputs.version }} source, commit ${TELEGRAM_COMMIT:0:10}. Max accounts: ${MAX_ACCOUNTS} each. ABI: ${BUILD_ABI}. Open this page on your phone and tap an .apk to install."; then break; fi
             sleep 5
           done
           gh release upload "$TAG" "${{ steps.collect.outputs.apk }}" "${{ steps.collect.outputs.sums }}" \

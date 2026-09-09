@@ -51,14 +51,32 @@ Your own build of Telegram for Android with the account limit raised (32 account
 Nothing else in Telegram is changed. Built on GitHub's servers from the official
 [DrKLO/Telegram](https://github.com/DrKLO/Telegram) source (GPL v2).
 
-## Two apps
+## Three apps
 
-Every build produces **two** APKs from the same code: `Chihuahua1-….apk` and
-`Chihuahua2-….apk`. They differ only in the application id (`com.chihuahua.messenger` and
-`com.chihuahua.messenger2`), the name and the icon — a different one of the two dogs — so Android
+Every build produces **three** APKs from the same code: `Chihuahua1-….apk`, `Chihuahua2-….apk` and
+`Chihuahua3-….apk`. The application id differs (`com.chihuahua.messenger`, `…2`, `…3`), so Android
 treats them as separate apps and installs them side by side: 32 accounts each, their own
-notifications, their own settings. Install one or both; they update independently from the same
-release. `config.env` holds the second app's name, id and icon folder (`APP2_*`).
+notifications, their own settings. Install any or all; they update independently from the same
+release. Each has its own animal on the icon — two dogs and a cat.
+
+`config.env` gives every app after the first a block of `APP<n>_` settings, and any of them
+overrides the plain setting for that app alone; anything the block does not mention stays the same
+as app one. That is the whole mechanism, so a new app is a block of five lines plus an icon folder.
+
+**Chihuahua 3** uses it for two things the others do not do:
+
+- After a login it offers to set up **Two-Step Verification** (once per account — answer either way
+  and it does not come back, and it never asks for an account that already has a password).
+- A newly logged-in account **joins the groups and channels in `APP3_AUTO_JOIN`, muted**. Joining is
+  paced — one group every six seconds, one account at a time, marked done per account and group so
+  nothing is tried twice and a restart carries on where it stopped. A Telegram rate limit parks that
+  account until the app is started again rather than being retried into a harder limit.
+  **Settings → Chihuahua → New accounts** shows how many are left and taps to resume. Clear
+  `APP3_AUTO_JOIN` and it joins nothing.
+
+  Worth knowing before you use it: many accounts on one phone joining the same list of groups is the
+  shape Telegram's anti-spam is built to notice, whatever the accounts are for. The pacing helps; it
+  is not a guarantee.
 
 ## Get the APK
 

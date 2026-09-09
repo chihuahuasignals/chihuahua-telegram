@@ -41,6 +41,19 @@ PROFILES = {
         reach=1.2, fade=2.6,           # wrong, so this head stays inside the rim, no overflow
         out="../../icons2",
     ),
+    "three": dict(                     # Chihuahua 3 — the cat
+        file="cutout3_u2net.png",
+        scale=0.096,
+        # a cat's ears are tall AND wide, so their tips sit further from the middle of the head
+        # than any dog's: anchored between the eyes the right ear left the 33 dp safe circle and
+        # came back with a flat top. The anchor moves to the middle of the skull instead, which
+        # brings both ears in far enough to cross the rim intact.
+        anchor=(255, 330),
+        at=(55.0, 59.0),
+        above=53.0,
+        reach=1.8, fade=2.6,
+        out="../../icons3",
+    ),
 }
 
 # ---- palette (Chihuahua 98: navy title bar -> bright blue) --------------------------------------

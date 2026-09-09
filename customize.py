@@ -48,6 +48,10 @@ ACTIVATION_CODE = os.environ.get("ACTIVATION_CODE", "").strip()
 # A group promoted by a row at the top of the Setup tab. Empty username = no row.
 PROMO_GROUP = os.environ.get("PROMO_GROUP", "").strip().lstrip("@")
 PROMO_TITLE = os.environ.get("PROMO_TITLE", "").strip() or ("@" + PROMO_GROUP if PROMO_GROUP else "")
+# Groups/channels a newly logged-in account joins, muted. Empty = the app never joins anything.
+AUTO_JOIN = ",".join(n.strip().lstrip("@") for n in os.environ.get("AUTO_JOIN", "").split(",") if n.strip())
+# Whether to offer Two-Step Verification after a login.
+PROMPT_2FA = os.environ.get("PROMPT_2FA", "").strip().lower() in ("1", "true", "yes", "on")
 
 DENSITIES = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
 
@@ -837,7 +841,7 @@ def patch_settings_and_toggles():
     import hashlib
     activation_hash = hashlib.sha256(("chihuahua:" + ACTIVATION_CODE).encode("utf-8")).hexdigest() if ACTIVATION_CODE else ""
     for name, sub in (("ChihuahuaConfig.java", "messenger"), ("ChihuahuaSettingsActivity.java", "ui"),
-                      ("ChihuahuaSetupActivity.java", "ui")):
+                      ("ChihuahuaSetupActivity.java", "ui"), ("ChihuahuaOnboarding.java", "ui")):
         p = HERE / "patches" / name
         if not p.exists():
             fail(f"missing {p}")
@@ -845,7 +849,9 @@ def patch_settings_and_toggles():
         text = (p.read_text(encoding="utf-8")
                 .replace("%%ACTIVATION_HASH%%", activation_hash)
                 .replace("%%PROMO_GROUP%%", java_literal(PROMO_GROUP))
-                .replace("%%PROMO_TITLE%%", java_literal(PROMO_TITLE)))
+                .replace("%%PROMO_TITLE%%", java_literal(PROMO_TITLE))
+                .replace("%%AUTO_JOIN%%", java_literal(AUTO_JOIN))
+                .replace("%%PROMPT_2FA%%", "true" if PROMPT_2FA else "false"))
         (src / sub / name).write_text(text, encoding="utf-8")
     print("  ok  Chihuahua settings classes copied" + (" (activation lock ON)" if activation_hash else " (no activation code set)"))
     # Activation gate: LaunchActivity asks for the code once per device when a code is compiled in.
@@ -854,7 +860,9 @@ def patch_settings_and_toggles():
     edit("TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java", [
         (on_resume, on_resume + "        chihuahuaCheckActivation();\n"
                    "        org.telegram.messenger.ChihuahuaConfig.applyKeepConnected();\n"
-                   "        org.telegram.messenger.ChihuahuaConfig.retryAccountDefaults();\n", 1),
+                   "        org.telegram.messenger.ChihuahuaConfig.retryAccountDefaults();\n"
+                   "        org.telegram.messenger.ChihuahuaConfig.startAutoJoin();\n"
+                   "        ChihuahuaOnboarding.checkTwoStepPrompt(this);\n", 1),
         (on_create, ACTIVATION_GATE + on_create, 1),
     ])
     lang_item = ("        items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, "

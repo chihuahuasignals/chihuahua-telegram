@@ -49,6 +49,7 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
     private static final int ID_AGE_ALWAYS = 21;
     private static final int ID_LONG_TTL = 26;
     private static final int ID_TTL_ALL = 27;
+    private static final int ID_JOIN_STATUS = 28;
     /** Threshold rows use ID_MONTHS_BASE + months. */
     private static final int ID_MONTHS_BASE = 200;
     private static final int[] MONTH_CHOICES = {1, 3, 6, 12};
@@ -111,6 +112,9 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
         if (ttlPending > 0) {
             items.add(UItem.asButton(ID_TTL_ALL, "Apply to every account now",
                     ttlPending + (ttlPending == 1 ? " account" : " accounts")));
+        }
+        if (!ChihuahuaConfig.autoJoinStatus().isEmpty()) {
+            items.add(UItem.asButton(ID_JOIN_STATUS, "Groups joined automatically", ChihuahuaConfig.autoJoinStatus()));
         }
         items.add(UItem.asShadow("Each account that logs in from now on is set once to sessions 1 year, account 24 months and birthday visible to everybody — against Telegram's 6 months, 18 months and contacts only. All three are on that account's Setup tab; change one by hand and it stays changed, because the app only ever sets an account once. Accounts already logged in are untouched until you press the button."));
 
@@ -194,6 +198,13 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
                     getContext().startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
                 } catch (Throwable ignore) {
                 }
+            }
+            return;
+        }
+        if (item.id == ID_JOIN_STATUS) {
+            ChihuahuaConfig.resumeAutoJoin();
+            if (listView != null && listView.adapter != null) {
+                listView.adapter.update(true);
             }
             return;
         }
