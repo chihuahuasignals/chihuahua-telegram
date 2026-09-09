@@ -100,6 +100,20 @@ def java_escape(s):
     return s.replace("\\", "\\\\").replace('"', '\\"')
 
 
+def java_literal(s):
+    """java_escape, plus \\uXXXX for anything non-ASCII, so a value carrying an emoji survives the
+    trip through config.env, the CI environment and javac whatever the encodings are."""
+    out = []
+    for ch in java_escape(s):
+        if ord(ch) < 128:
+            out.append(ch)
+        else:
+            be = ch.encode("utf-16-be", "surrogatepass")
+            for i in range(0, len(be), 2):
+                out.append("\\u%04x" % int.from_bytes(be[i:i + 2], "big"))
+    return "".join(out)
+
+
 def xml_escape(s):
     return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
              .replace('"', "&quot;").replace("'", "\\'"))
@@ -830,8 +844,8 @@ def patch_settings_and_toggles():
             continue
         text = (p.read_text(encoding="utf-8")
                 .replace("%%ACTIVATION_HASH%%", activation_hash)
-                .replace("%%PROMO_GROUP%%", java_escape(PROMO_GROUP))
-                .replace("%%PROMO_TITLE%%", java_escape(PROMO_TITLE)))
+                .replace("%%PROMO_GROUP%%", java_literal(PROMO_GROUP))
+                .replace("%%PROMO_TITLE%%", java_literal(PROMO_TITLE)))
         (src / sub / name).write_text(text, encoding="utf-8")
     print("  ok  Chihuahua settings classes copied" + (" (activation lock ON)" if activation_hash else " (no activation code set)"))
     # Activation gate: LaunchActivity asks for the code once per device when a code is compiled in.
@@ -840,7 +854,7 @@ def patch_settings_and_toggles():
     edit("TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java", [
         (on_resume, on_resume + "        chihuahuaCheckActivation();\n"
                    "        org.telegram.messenger.ChihuahuaConfig.applyKeepConnected();\n"
-                   "        org.telegram.messenger.ChihuahuaConfig.retryTtlDefaults();\n", 1),
+                   "        org.telegram.messenger.ChihuahuaConfig.retryAccountDefaults();\n", 1),
         (on_create, ACTIVATION_GATE + on_create, 1),
     ])
     lang_item = ("        items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, "

@@ -106,13 +106,13 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
         items.add(UItem.asShadow("In group chats the sender's estimated account age appears next to their name, where Telegram shows the admin label. Accounts under the threshold are red. Handy for spotting throwaway accounts posting promos \u2014 the estimate comes from the user ID, so it works even when the profile is empty."));
 
         items.add(UItem.asHeader("New accounts"));
-        items.add(UItem.asCheck(ID_LONG_TTL, "Sessions 1 year, account 24 months").setChecked(ChihuahuaConfig.longTtlDefaults()));
-        int ttlPending = ChihuahuaConfig.ttlAccountsPending();
+        items.add(UItem.asCheck(ID_LONG_TTL, "Apply defaults on login").setChecked(ChihuahuaConfig.accountDefaults()));
+        int ttlPending = ChihuahuaConfig.accountsPendingDefaults();
         if (ttlPending > 0) {
             items.add(UItem.asButton(ID_TTL_ALL, "Apply to every account now",
                     ttlPending + (ttlPending == 1 ? " account" : " accounts")));
         }
-        items.add(UItem.asShadow("Telegram logs a session out after 6 months unused and deletes an account after 18 months away. Each account that logs in from now on is set once to the longest Telegram offers — both are on its Setup tab and change either by hand and it stays changed. Accounts already logged in are untouched until you press the button."));
+        items.add(UItem.asShadow("Each account that logs in from now on is set once to sessions 1 year, account 24 months and birthday visible to everybody — against Telegram's 6 months, 18 months and contacts only. All three are on that account's Setup tab; change one by hand and it stays changed, because the app only ever sets an account once. Accounts already logged in are untouched until you press the button."));
 
         int activated = 0;
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
@@ -198,9 +198,9 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
             return;
         }
         if (item.id == ID_TTL_ALL) {
-            ChihuahuaConfig.applyTtlDefaultsToAll();
+            ChihuahuaConfig.applyAccountDefaultsToAll();
             BulletinFactory.of(this).createSimpleBulletin(R.raw.contact_check,
-                    "Setting every account to 1 year and 24 months").show();
+                    "Applying the defaults to every account").show();
             return;
         }
         if (item.id == ID_NOTIF_STATUS) {
@@ -255,7 +255,7 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
             } else if (item.id == ID_AGE_ALWAYS) {
                 key = ChihuahuaConfig.KEY_AGE_ALWAYS;
             } else if (item.id == ID_LONG_TTL) {
-                key = ChihuahuaConfig.KEY_LONG_TTL;
+                key = ChihuahuaConfig.KEY_ACCOUNT_DEFAULTS;
             } else {
                 return;
             }

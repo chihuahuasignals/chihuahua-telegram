@@ -2,11 +2,11 @@
 
 Your own build of Telegram for Android with the account limit raised (32 accounts instead of 3) plus:
 
-- A row at the top of the Setup tab for a group of your choice — **SG Massage Chit Chat** here.
-  Tapping it opens the group; joining is Telegram's own button at the bottom of the chat, so nobody
-  is signed up to anything without pressing it. `config.env` sets which group (`PROMO_GROUP`,
-  `PROMO_TITLE`); clear `PROMO_GROUP` and the row is gone.
-
+- A row at the top of the Setup tab for a group of your choice — 🇸🇬 **@MassageInSG** here. Tapping it
+  opens the group; joining is Telegram's own button at the bottom of the chat, so nobody is signed up
+  to anything without pressing it. `config.env` sets the username and the label shown
+  (`PROMO_GROUP`, `PROMO_TITLE` — the label is used as written, so it stays one tidy line whatever
+  the group's real title is); clear `PROMO_GROUP` and the row is gone.
 - **Add to Group**, **Copy ID** and **Ban from all my groups** in every user's profile menu (⋮).
 - **Admins** in a group or channel's ⋮ menu — the full admin list in one tap, in any group you are in, not just ones you manage (Telegram only offers this through Manage Group, which needs admin rights).
 - The estimated month the account was created shown next to their online status in profiles (worked out from the ID), and the user's ID on its own row below — tap it to copy. Both switchable.
@@ -17,20 +17,19 @@ Your own build of Telegram for Android with the account limit raised (32 account
 - Tapping an account in that card switches to it and stays on the Settings tab (Telegram jumps to Chats).
 - **Add Account** at the bottom of the Accounts card on the Settings tab, just above Account.
 - **Sync Contacts** is unticked by default when adding an account (tick it yourself if you want it).
-- The Contacts tab is a **Setup** tab instead: the nine settings worth touching on a freshly logged-in
-  account, on one page, each changed where it stands — **Bio** and **Username** (typed in, with the
-  same live "is it taken" check Telegram does, saved with the ✓ at the top), **Birthday**,
-  **Two-Step Verification**, **Terminate old sessions if inactive for**, and the privacy of
-  **Last Seen & Online**, **Date of Birth** and **Invites** (Everybody / My Contacts / Nobody), plus
-  **Delete my account if away for**. Telegram spreads these over three screens and up to four taps
-  each. Everything but Two-Step Verification applies the moment you pick it; exception lists you have
-  set for a privacy rule are kept. The contact list is still there — a **Contacts** row at the bottom
-  of the page, and on a long press of the tab.
-- Every account that logs in is set once to Telegram's longest self-destruct choices — **sessions
-  1 year**, **account 24 months** — instead of Telegram's 6 and 18. Once per account: change either
-  by hand on its Setup tab afterwards and it stays changed. Accounts that were already logged in are
-  left alone until **Settings → Chihuahua → New accounts → Apply to every account now** (which
-  spaces the calls out), and the whole thing switches off there too.
+- The Contacts tab is a **Setup** tab instead: the settings worth touching on a freshly logged-in
+  account, on one page, each changed where it stands — **Two-Step Verification**, **Terminate old
+  sessions if inactive for**, **Delete my account if away for**, **Birthday**, and the privacy of
+  **Last Seen & Online**, **Date of Birth** and **Invites** (Everybody / My Contacts / Nobody).
+  Telegram spreads these over three screens and up to four taps each. Everything but Two-Step
+  Verification applies the moment you pick it; exception lists you have set for a privacy rule are
+  kept. The contact list is still there — a **Contacts** row at the bottom of the page, and on a
+  long press of the tab.
+- Every account that logs in is set once to **sessions 1 year**, **account 24 months** and
+  **birthday visible to everybody**, against Telegram's 6 months, 18 months and contacts only. Once
+  per account: change any of them by hand on its Setup tab afterwards and it stays changed. Accounts
+  that were already logged in are left alone until **Settings → Chihuahua → New accounts → Apply to
+  every account now** (which spaces the calls out), and the whole thing switches off there too.
 - No **Invite Friends** list on the Contacts screen. Telegram lists everyone in the phone's own address book who is not on Telegram; this build shows only real Telegram contacts.
 - The QR button on a profile's username row is grey instead of white (Telegram tints it for the title bar, so on this theme's light cards it was invisible).
 - A **select-all** tick in the contact list's selection bar: long-press one contact, tap the tick and every contact of that account is selected (not just the ones on screen), then Delete. Telegram's own confirmation and undo still apply.

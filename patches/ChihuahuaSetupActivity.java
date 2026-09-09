@@ -2,9 +2,7 @@ package org.telegram.ui;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.text.SpannableString;
 import android.text.TextUtils;
-import android.text.style.ForegroundColorSpan;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -15,23 +13,18 @@ import androidx.core.view.ViewCompat;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.LocaleController;
-import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
-import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_account;
 import org.telegram.ui.ActionBar.ActionBar;
-import org.telegram.ui.ActionBar.ActionBarMenu;
-import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BackDrawable;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Cells.EditTextCell;
 import org.telegram.ui.Cells.RadioColorCell;
 import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.BulletinFactory;
@@ -44,8 +37,9 @@ import org.telegram.ui.Components.UniversalRecyclerView;
 import java.util.ArrayList;
 
 /**
- * The Setup tab: the handful of settings worth touching on a freshly logged-in account, all on one
- * page. Telegram spreads these over Account settings, Privacy and Security, and Devices.
+ * The Setup tab: the settings worth touching on a freshly logged-in account, all on one page and
+ * each changed where it stands. Telegram spreads these over Account settings, Privacy and Security,
+ * and Devices.
  */
 public class ChihuahuaSetupActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
 
@@ -59,8 +53,6 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
     private static final int ID_CONTACTS = 8;
     private static final int ID_PROMO_GROUP = 9;
 
-    private static final int done_button = 1;
-
     /** A group promoted at the top of this page; set from config.env. Empty = no row. */
     private static final String PROMO_GROUP = "%%PROMO_GROUP%%";
     private static final String PROMO_TITLE = "%%PROMO_TITLE%%";
@@ -71,9 +63,6 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
     private static final int[] DELETE_TTL_DAYS = {30, 90, 182, 365, 548, 730};
 
     private UniversalRecyclerView listView;
-    private EditTextCell bioEdit;
-    private EditTextCell usernameEdit;
-    private ActionBarMenuItem doneButton;
 
     private boolean hasMainTabs;
     private int additionNavigationBarHeight;
@@ -81,22 +70,9 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
 
     private TLRPC.UserFull userFull;
     private TL_account.TL_birthday birthday;
-    private String currentBio = "";
-    private String currentUsername = "";
 
     private TL_account.Password currentPassword;
     private int authTtlDays;
-
-    private Runnable usernameCheckRunnable;
-    private int usernameCheckReqId;
-    private String usernameLastChecked;
-    private String usernameStatusText;
-    private int usernameStatusColorKey = Theme.key_windowBackgroundWhiteGrayText8;
-    private boolean usernameAvailable;
-    private boolean savingUsername;
-    private boolean savingBio;
-    /** True while a field is being filled in from the server, so that does not count as typing. */
-    private boolean ignoreTextChange;
 
     public ChihuahuaSetupActivity() {
         super();
@@ -115,7 +91,6 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
 
         getNotificationCenter().addObserver(this, NotificationCenter.privacyRulesUpdated);
         getNotificationCenter().addObserver(this, NotificationCenter.userInfoDidLoad);
-        getNotificationCenter().addObserver(this, NotificationCenter.updateInterfaces);
         getNotificationCenter().addObserver(this, NotificationCenter.twoStepPasswordChanged);
 
         getContactsController().loadPrivacySettings();
@@ -129,9 +104,7 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
     public void onFragmentDestroy() {
         getNotificationCenter().removeObserver(this, NotificationCenter.privacyRulesUpdated);
         getNotificationCenter().removeObserver(this, NotificationCenter.userInfoDidLoad);
-        getNotificationCenter().removeObserver(this, NotificationCenter.updateInterfaces);
         getNotificationCenter().removeObserver(this, NotificationCenter.twoStepPasswordChanged);
-        cancelUsernameCheck();
         super.onFragmentDestroy();
     }
 
@@ -144,12 +117,6 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
             }
             readUserInfo();
             update();
-        } else if (id == NotificationCenter.updateInterfaces) {
-            // Fires constantly (online status, typing); only a name change matters here.
-            if ((((Integer) args[0]) & MessagesController.UPDATE_MASK_NAME) != 0) {
-                readUserInfo();
-                update();
-            }
         } else if (id == NotificationCenter.twoStepPasswordChanged) {
             loadPassword();
         } else {
@@ -169,39 +136,9 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
             public void onItemClick(int id) {
                 if (id == -1) {
                     finishFragment();
-                } else if (id == done_button) {
-                    save();
                 }
             }
         });
-        final ActionBarMenu menu = actionBar.createMenu();
-        doneButton = menu.addItemWithWidth(done_button, R.drawable.ic_ab_done, AndroidUtilities.dp(56));
-        doneButton.setContentDescription(LocaleController.getString(R.string.Done));
-        doneButton.setVisibility(View.GONE);
-
-        bioEdit = new EditTextCell(context, LocaleController.getString(R.string.UserBio), true, false, getMessagesController().getAboutLimit(), resourceProvider) {
-            @Override
-            protected void onTextChanged(CharSequence newText) {
-                super.onTextChanged(newText);
-                if (!ignoreTextChange) {
-                    checkDone();
-                }
-            }
-        };
-        bioEdit.setShowLimitWhenEmpty(true);
-        bioEdit.setDivider(true);
-
-        usernameEdit = new EditTextCell(context, LocaleController.getString(R.string.Username), false, false, -1, resourceProvider) {
-            @Override
-            protected void onTextChanged(CharSequence newText) {
-                super.onTextChanged(newText);
-                if (!ignoreTextChange) {
-                    checkUsername(newText == null ? "" : newText.toString());
-                    checkDone();
-                }
-            }
-        };
-        usernameEdit.hideKeyboardOnEnter();
 
         final FrameLayout contentView = new FrameLayout(context);
         contentView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray, resourceProvider));
@@ -242,7 +179,6 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
         if (listView != null && listView.adapter != null) {
             listView.adapter.update(true);
         }
-        checkDone();
     }
 
     /* ------------------------------------------------------------------ the page */
@@ -251,26 +187,9 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
         if (!PROMO_GROUP.isEmpty()) {
             items.add(SettingsActivity.SettingCell.Factory.of(
                 ID_PROMO_GROUP, IconBackgroundColors.BLUE_DEEP.top, IconBackgroundColors.BLUE_DEEP.bottom, R.drawable.msg_discussion,
-                promoName(), promoSubtitle(), promoJoined() ? "Open" : null));
+                PROMO_TITLE, null, promoJoined() ? "Open" : "Join"));
             items.add(UItem.asShadow(null));
         }
-
-        items.add(UItem.asHeader("Your info"));
-        items.add(UItem.asCustom(bioEdit));
-        items.add(UItem.asCustom(usernameEdit));
-        if (!TextUtils.isEmpty(usernameStatusText)) {
-            final SpannableString status = new SpannableString(usernameStatusText);
-            status.setSpan(new ForegroundColorSpan(Theme.getColor(usernameStatusColorKey, resourceProvider)), 0, status.length(), 0);
-            items.add(UItem.asShadow(status));
-        } else {
-            items.add(UItem.asShadow("A few words about you, and the @name people can find you by. Tap ✓ at the top to save them."));
-        }
-
-        items.add(SettingsActivity.SettingCell.Factory.of(
-            ID_BIRTHDAY, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.filled_birthday,
-            LocaleController.getString(R.string.ContactBirthday), null,
-            birthday == null ? LocaleController.getString(R.string.AddBirthday) : UserInfoActivity.birthdayString(birthday)));
-        items.add(UItem.asShadow("Saved as soon as you pick it. Who can see it is the Date of Birth setting below."));
 
         items.add(UItem.asHeader("Security"));
         items.add(SettingsActivity.SettingCell.Factory.of(
@@ -280,7 +199,17 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
         items.add(SettingsActivity.SettingCell.Factory.of(
             ID_SESSION_TTL, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.settings_devices,
             "Terminate old sessions", "if inactive for", sessionTtlValue()));
-        items.add(UItem.asShadow("Two-Step Verification asks for a password as well as the SMS code when this account signs in somewhere new. Sessions that go unused for the chosen time are logged out by Telegram on their own."));
+        items.add(SettingsActivity.SettingCell.Factory.of(
+            ID_DELETE_TTL, IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom, R.drawable.msg_delete,
+            "Delete my account", "if away for", deleteTtlValue()));
+        items.add(UItem.asShadow("Two-Step Verification asks for a password as well as the SMS code when this account signs in somewhere new. The other two are Telegram's own timers: a session nobody uses is logged out, and an account nobody comes back to is deleted."));
+
+        items.add(UItem.asHeader("Your info"));
+        items.add(SettingsActivity.SettingCell.Factory.of(
+            ID_BIRTHDAY, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.filled_birthday,
+            LocaleController.getString(R.string.ContactBirthday), null,
+            birthday == null ? LocaleController.getString(R.string.AddBirthday) : UserInfoActivity.birthdayString(birthday)));
+        items.add(UItem.asShadow("Saved as soon as you pick it. Who can see it is Date of Birth below."));
 
         items.add(UItem.asHeader("Privacy"));
         items.add(SettingsActivity.SettingCell.Factory.of(
@@ -292,10 +221,7 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
         items.add(SettingsActivity.SettingCell.Factory.of(
             ID_PRIVACY_INVITES, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.msg_groups,
             LocaleController.getString(R.string.PrivacyInvites), null, privacyValue(ContactsController.PRIVACY_RULES_TYPE_INVITE)));
-        items.add(SettingsActivity.SettingCell.Factory.of(
-            ID_DELETE_TTL, IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom, R.drawable.msg_delete,
-            "Delete my account", "if away for", deleteTtlValue()));
-        items.add(UItem.asShadow("Each of these applies the moment you pick it. Invites decides who may add this account to groups and channels. If you never come back, Telegram deletes the account after the time set here."));
+        items.add(UItem.asShadow("Each applies the moment you pick it. Invites decides who may add this account to groups and channels. Exception lists you have already set are kept."));
 
         items.add(UItem.asHeader("More"));
         items.add(SettingsActivity.SettingCell.Factory.of(
@@ -331,35 +257,20 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
 
     /* ------------------------------------------------------------------ the promoted group */
 
-    /** The group's chat object, when this account already has it cached. */
-    private TLRPC.Chat promoChat() {
-        if (PROMO_GROUP.isEmpty()) {
-            return null;
-        }
-        final TLObject object = getMessagesController().getUserOrChat(PROMO_GROUP);
-        return object instanceof TLRPC.Chat ? (TLRPC.Chat) object : null;
-    }
-
-    private String promoName() {
-        final TLRPC.Chat chat = promoChat();
-        return chat != null && !TextUtils.isEmpty(chat.title) ? chat.title : PROMO_TITLE;
-    }
-
-    private String promoSubtitle() {
-        final TLRPC.Chat chat = promoChat();
-        if (chat != null && chat.participants_count > 0) {
-            return LocaleController.formatPluralStringComma("Members", chat.participants_count);
-        }
-        return "@" + PROMO_GROUP;
-    }
-
     /** Only true when this account is known to be in the group — never guesses the other way. */
     private boolean promoJoined() {
-        final TLRPC.Chat chat = promoChat();
-        return chat != null && !chat.left && !chat.kicked;
+        if (PROMO_GROUP.isEmpty()) {
+            return false;
+        }
+        final TLObject object = getMessagesController().getUserOrChat(PROMO_GROUP);
+        if (!(object instanceof TLRPC.Chat)) {
+            return false;
+        }
+        final TLRPC.Chat chat = (TLRPC.Chat) object;
+        return !chat.left && !chat.kicked;
     }
 
-    /* ------------------------------------------------------------------ bio and username */
+    /* ------------------------------------------------------------------ birthday */
 
     private void loadUserInfo() {
         final TLRPC.User user = getUserConfig().getCurrentUser();
@@ -369,240 +280,12 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
         readUserInfo();
     }
 
-    /** Copies what the app already knows about this account into the fields. */
     private void readUserInfo() {
-        ignoreTextChange = true;
-        try {
-            userFull = getMessagesController().getUserFull(getUserConfig().getClientUserId());
-            if (userFull != null) {
-                birthday = userFull.birthday;
-                if (!savingBio && !bioFocused()) {
-                    currentBio = normaliseBio(userFull.about);
-                    if (bioEdit != null && !TextUtils.equals(currentBio, bioEdit.getText())) {
-                        bioEdit.setText(currentBio);
-                    }
-                }
-            }
-            final TLRPC.User user = getUserConfig().getCurrentUser();
-            final String username = user == null ? null : UserObject.getPublicUsername(user);
-            if (!savingUsername && !usernameFocused()) {
-                currentUsername = username == null ? "" : username;
-                if (usernameEdit != null && !TextUtils.equals(currentUsername, usernameEdit.getText())) {
-                    usernameEdit.setText(currentUsername);
-                    usernameStatusText = null;
-                    usernameAvailable = true;
-                    cancelUsernameCheck();
-                }
-            }
-        } finally {
-            ignoreTextChange = false;
+        userFull = getMessagesController().getUserFull(getUserConfig().getClientUserId());
+        if (userFull != null) {
+            birthday = userFull.birthday;
         }
     }
-
-    private boolean bioFocused() {
-        return bioEdit != null && bioEdit.editText.isFocused();
-    }
-
-    private boolean usernameFocused() {
-        return usernameEdit != null && usernameEdit.editText.isFocused();
-    }
-
-    /** Bios are single-line on the server, so what is typed and what comes back must be compared the same way. */
-    private static String normaliseBio(CharSequence text) {
-        return text == null ? "" : text.toString().replace("\n", " ").trim();
-    }
-
-    private String bioText() {
-        return bioEdit == null ? currentBio : normaliseBio(bioEdit.getText());
-    }
-
-    private String usernameText() {
-        if (usernameEdit == null) {
-            return currentUsername;
-        }
-        String text = usernameEdit.getText().toString().trim();
-        if (text.startsWith("@")) {
-            text = text.substring(1);
-        }
-        return text;
-    }
-
-    private boolean bioChanged() {
-        return !TextUtils.equals(currentBio, bioText());
-    }
-
-    private boolean usernameChanged() {
-        return !TextUtils.equals(currentUsername, usernameText());
-    }
-
-    private void checkDone() {
-        if (doneButton != null) {
-            doneButton.setVisibility(bioChanged() || usernameChanged() ? View.VISIBLE : View.GONE);
-        }
-    }
-
-    private void save() {
-        if (bioChanged()) {
-            saveBio();
-        }
-        if (usernameChanged()) {
-            saveUsername();
-        }
-        AndroidUtilities.hideKeyboard(fragmentView);
-    }
-
-    private void saveBio() {
-        if (userFull == null) {
-            userFull = getMessagesController().getUserFull(getUserConfig().getClientUserId());
-        }
-        if (userFull == null) {
-            return;
-        }
-        final String about = bioText();
-        final TLRPC.UserFull full = userFull;
-        final TL_account.updateProfile req = new TL_account.updateProfile();
-        req.flags |= 4;
-        req.about = about;
-        savingBio = true;
-        getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-            savingBio = false;
-            if (error != null) {
-                BulletinFactory.showError(error);
-                update();
-                return;
-            }
-            currentBio = about;
-            full.about = about;
-            full.flags = TextUtils.isEmpty(about) ? (full.flags & ~2) : (full.flags | 2);
-            getMessagesStorage().updateUserInfo(full, false);
-            getNotificationCenter().postNotificationName(NotificationCenter.userInfoDidLoad, getUserConfig().getClientUserId(), full);
-            BulletinFactory.of(this).createSimpleBulletin(R.raw.contact_check, "Bio saved").show();
-            update();
-        }), ConnectionsManager.RequestFlagFailOnServerErrors);
-    }
-
-    private void saveUsername() {
-        final String username = usernameText();
-        if (!username.isEmpty() && !usernameAvailable) {
-            BulletinFactory.of(this).createSimpleBulletin(R.raw.chats_infotip,
-                usernameStatusText != null ? usernameStatusText : LocaleController.getString(R.string.UsernameInvalid)).show();
-            return;
-        }
-        final TL_account.updateUsername req = new TL_account.updateUsername();
-        req.username = username;
-        savingUsername = true;
-        getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-            savingUsername = false;
-            if (error != null && !"USERNAME_NOT_MODIFIED".equals(error.text)) {
-                BulletinFactory.showError(error);
-                update();
-                return;
-            }
-            if (response instanceof TLRPC.User) {
-                final ArrayList<TLRPC.User> users = new ArrayList<>();
-                users.add((TLRPC.User) response);
-                getMessagesController().putUsers(users, false);
-                getMessagesStorage().putUsersAndChats(users, null, false, true);
-                getUserConfig().saveConfig(true);
-            }
-            currentUsername = username;
-            usernameStatusText = null;
-            BulletinFactory.of(this).createSimpleBulletin(R.raw.contact_check, "Username saved").show();
-            update();
-        }), ConnectionsManager.RequestFlagFailOnServerErrors);
-    }
-
-    private void cancelUsernameCheck() {
-        if (usernameCheckRunnable != null) {
-            AndroidUtilities.cancelRunOnUIThread(usernameCheckRunnable);
-            usernameCheckRunnable = null;
-        }
-        if (usernameCheckReqId != 0) {
-            getConnectionsManager().cancelRequest(usernameCheckReqId, true);
-            usernameCheckReqId = 0;
-        }
-        usernameLastChecked = null;
-    }
-
-    /** Only redraws the list when the line under the field really changed — this runs per keystroke. */
-    private void setUsernameStatus(String text, int colorKey) {
-        if (TextUtils.equals(usernameStatusText, text) && usernameStatusColorKey == colorKey) {
-            return;
-        }
-        usernameStatusText = text;
-        usernameStatusColorKey = colorKey;
-        update();
-    }
-
-    /** Same rules Telegram's own username screen applies, then asks the server. */
-    private void checkUsername(String text) {
-        cancelUsernameCheck();
-        usernameAvailable = false;
-        String name = text.trim();
-        if (name.startsWith("@")) {
-            name = name.substring(1);
-        }
-        if (name.isEmpty()) {
-            usernameAvailable = true;
-            setUsernameStatus(null, Theme.key_windowBackgroundWhiteGrayText8);
-            return;
-        }
-        if (name.startsWith("_") || name.endsWith("_")) {
-            setUsernameStatus(LocaleController.getString(R.string.UsernameInvalid), Theme.key_text_RedRegular);
-            return;
-        }
-        for (int a = 0; a < name.length(); a++) {
-            final char ch = name.charAt(a);
-            if (a == 0 && ch >= '0' && ch <= '9') {
-                setUsernameStatus(LocaleController.getString(R.string.UsernameInvalidStartNumber), Theme.key_text_RedRegular);
-                return;
-            }
-            if (!(ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch == '_')) {
-                setUsernameStatus(LocaleController.getString(R.string.UsernameInvalid), Theme.key_text_RedRegular);
-                return;
-            }
-        }
-        if (name.length() < 4) {
-            setUsernameStatus(LocaleController.getString(R.string.UsernameInvalidShort), Theme.key_text_RedRegular);
-            return;
-        }
-        if (name.length() > 32) {
-            setUsernameStatus(LocaleController.getString(R.string.UsernameInvalidLong), Theme.key_text_RedRegular);
-            return;
-        }
-        if (name.equals(currentUsername)) {
-            usernameAvailable = true;
-            setUsernameStatus(LocaleController.formatString(R.string.UsernameAvailable, name), Theme.key_windowBackgroundWhiteGreenText);
-            return;
-        }
-        setUsernameStatus(LocaleController.getString(R.string.UsernameChecking), Theme.key_windowBackgroundWhiteGrayText8);
-        final String nameFinal = name;
-        usernameLastChecked = nameFinal;
-        usernameCheckRunnable = () -> {
-            final TL_account.checkUsername req = new TL_account.checkUsername();
-            req.username = nameFinal;
-            usernameCheckReqId = getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-                usernameCheckReqId = 0;
-                if (!nameFinal.equals(usernameLastChecked)) {
-                    return;
-                }
-                if (error == null && response instanceof TLRPC.TL_boolTrue) {
-                    usernameAvailable = true;
-                    setUsernameStatus(LocaleController.formatString(R.string.UsernameAvailable, nameFinal), Theme.key_windowBackgroundWhiteGreenText);
-                } else {
-                    usernameAvailable = false;
-                    if (error != null && "USERNAME_PURCHASE_AVAILABLE".equals(error.text)) {
-                        setUsernameStatus(LocaleController.getString(R.string.UsernameInUsePurchase), Theme.key_windowBackgroundWhiteGrayText8);
-                    } else {
-                        setUsernameStatus(LocaleController.getString(R.string.UsernameInUse), Theme.key_text_RedRegular);
-                    }
-                }
-            }), ConnectionsManager.RequestFlagFailOnServerErrors);
-        };
-        AndroidUtilities.runOnUIThread(usernameCheckRunnable, 300);
-    }
-
-    /* ------------------------------------------------------------------ birthday */
 
     private void openBirthdayPicker() {
         if (getContext() == null) {

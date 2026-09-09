@@ -29,7 +29,7 @@ public class ChihuahuaConfig {
     public static final String KEY_QUICK_BAN = "quick_ban";
     public static final String KEY_KEEP_CONNECTED = "keep_connected";
     public static final String KEY_AGE_ALWAYS = "age_always_in_groups";
-    public static final String KEY_LONG_TTL = "long_ttl";
+    public static final String KEY_ACCOUNT_DEFAULTS = "account_defaults";
     /** Not a switch: months, stored separately (see flagMonths()). */
     public static final String KEY_FLAG_MONTHS = "flag_new_months";
 
@@ -50,7 +50,7 @@ public class ChihuahuaConfig {
     private static boolean quickBan = true;
     private static boolean keepConnected = true;
     private static boolean ageAlways = false;
-    private static boolean longTtl = true;
+    private static boolean accountDefaults = true;
     private static int flagMonths = 3;
 
     private static SharedPreferences prefs() {
@@ -78,7 +78,7 @@ public class ChihuahuaConfig {
             quickBan = p.getBoolean(KEY_QUICK_BAN, true);
             keepConnected = p.getBoolean(KEY_KEEP_CONNECTED, true);
             ageAlways = p.getBoolean(KEY_AGE_ALWAYS, false);
-            longTtl = p.getBoolean(KEY_LONG_TTL, true);
+            accountDefaults = p.getBoolean(KEY_ACCOUNT_DEFAULTS, true);
             flagMonths = p.getInt(KEY_FLAG_MONTHS, 3);
             loaded = true;
         }
@@ -410,40 +410,46 @@ public class ChihuahuaConfig {
                 + "\nBackground connection: " + connected + " of " + accounts + " accounts";
     }
 
-    // ---- session and account self-destruct ------------------------------------------------------
-    // Telegram logs a session out after 6 months unused and deletes an account after 18 months
-    // away. With this many accounts, most of them idle most of the time, that is tight, so each
-    // account that logs in here is set once to the longest Telegram offers: sessions 1 year,
-    // account 24 months. Once per account, keyed by user id — change either by hand afterwards
-    // and it sticks, because the app never sets it a second time. Accounts that were already
-    // logged in are left alone until the "Apply to every account" button in Settings is pressed.
+    // ---- defaults applied to an account when it logs in -----------------------------------------
+    // Telegram logs a session out after 6 months unused, deletes an account after 18 months away,
+    // and shows a birthday to contacts only. With this many accounts, most of them idle most of the
+    // time, that is tight, so each account that logs in here is set once to sessions 1 year,
+    // account 24 months and birthday visible to everybody. Once per account, keyed by user id, and
+    // each setting is marked done only when the server accepts it — so a call lost to a dead
+    // connection is retried on the next start, and once it lands the app never sets that account
+    // again, which is what makes changing any of them by hand afterwards stick. Accounts that were
+    // already logged in are left alone until the button in Settings -> Chihuahua is pressed.
 
-    /** Telegram's longest choices, in days. */
+    /** Telegram's longest self-destruct choices, in days. */
     public static final int SESSION_TTL_DAYS = 365;
     public static final int ACCOUNT_TTL_DAYS = 730;
 
-    public static boolean longTtlDefaults() {
+    public static boolean accountDefaults() {
         load();
-        return longTtl;
+        return accountDefaults;
     }
 
-    private static String sessionTtlKey(long userId) {
-        return "ttl_session_" + userId;
+    private static String sessionDoneKey(long userId) {
+        return "def_session_" + userId;
     }
 
-    private static String accountTtlKey(long userId) {
-        return "ttl_account_" + userId;
+    private static String accountDoneKey(long userId) {
+        return "def_account_" + userId;
     }
 
-    /** Set while an account's two calls have not both gone through, so a start can finish them. */
-    private static String ttlPendingKey(long userId) {
-        return "ttl_pending_" + userId;
+    private static String birthdayDoneKey(long userId) {
+        return "def_birthday_" + userId;
+    }
+
+    /** Set while an account's three calls have not all gone through, so a start can finish them. */
+    private static String pendingKey(long userId) {
+        return "def_pending_" + userId;
     }
 
     /** Called the moment an account finishes logging in on this build. */
     public static void onAccountLoggedIn(int account) {
         load();
-        if (!longTtl || ApplicationLoader.applicationContext == null) {
+        if (!accountDefaults || ApplicationLoader.applicationContext == null) {
             return;
         }
         try {
@@ -451,18 +457,18 @@ public class ChihuahuaConfig {
             if (userId == 0) {
                 return;
             }
-            prefs().edit().putBoolean(ttlPendingKey(userId), true).apply();
+            prefs().edit().putBoolean(pendingKey(userId), true).apply();
             // A couple of seconds in, so the fresh connection has settled.
-            AndroidUtilities.runOnUIThread(() -> applyTtlDefaults(account, false), 2000);
+            AndroidUtilities.runOnUIThread(() -> applyAccountDefaults(account, false), 2000);
         } catch (Throwable e) {
             FileLog.e(e);
         }
     }
 
     /** On every start: finish any account whose login-time calls did not get through. */
-    public static void retryTtlDefaults() {
+    public static void retryAccountDefaults() {
         load();
-        if (!longTtl || ApplicationLoader.applicationContext == null) {
+        if (!accountDefaults || ApplicationLoader.applicationContext == null) {
             return;
         }
         try {
@@ -473,8 +479,8 @@ public class ChihuahuaConfig {
                     continue;
                 }
                 final long userId = config.getClientUserId();
-                if (userId != 0 && p.getBoolean(ttlPendingKey(userId), false)) {
-                    applyTtlDefaults(a, false);
+                if (userId != 0 && p.getBoolean(pendingKey(userId), false)) {
+                    applyAccountDefaults(a, false);
                 }
             }
         } catch (Throwable e) {
@@ -483,24 +489,20 @@ public class ChihuahuaConfig {
     }
 
     /** The Settings button: every logged-in account, spaced out so it is not one burst. */
-    public static void applyTtlDefaultsToAll() {
+    public static void applyAccountDefaultsToAll() {
         int delay = 0;
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             if (!UserConfig.getInstance(a).isClientActivated()) {
                 continue;
             }
             final int account = a;
-            AndroidUtilities.runOnUIThread(() -> applyTtlDefaults(account, true), delay);
+            AndroidUtilities.runOnUIThread(() -> applyAccountDefaults(account, true), delay);
             delay += 1500;
         }
     }
 
-    /**
-     * Sets both TTLs on one account. Each half is marked done only when the server accepts it, so
-     * a call lost to a dead connection is retried on the next start. force = the Settings button,
-     * which ignores the marks and sets them again.
-     */
-    private static void applyTtlDefaults(int account, boolean force) {
+    /** force = the Settings button, which ignores the done marks and sets everything again. */
+    private static void applyAccountDefaults(int account, boolean force) {
         if (ApplicationLoader.applicationContext == null) {
             return;
         }
@@ -514,41 +516,57 @@ public class ChihuahuaConfig {
                 return;
             }
             final SharedPreferences p = prefs();
-            if (force || !p.getBoolean(sessionTtlKey(userId), false)) {
+            if (force || !p.getBoolean(sessionDoneKey(userId), false)) {
                 final TL_account.setAuthorizationTTL req = new TL_account.setAuthorizationTTL();
                 req.authorization_ttl_days = SESSION_TTL_DAYS;
-                org.telegram.tgnet.ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
-                    if (error == null) {
-                        prefs().edit().putBoolean(sessionTtlKey(userId), true).apply();
-                        clearTtlPending(userId);
-                    }
-                });
+                send(account, req, sessionDoneKey(userId), userId);
             }
-            if (force || !p.getBoolean(accountTtlKey(userId), false)) {
+            if (force || !p.getBoolean(accountDoneKey(userId), false)) {
                 final TL_account.setAccountTTL req = new TL_account.setAccountTTL();
                 req.ttl = new TLRPC.TL_accountDaysTTL();
                 req.ttl.days = ACCOUNT_TTL_DAYS;
-                org.telegram.tgnet.ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
-                    if (error == null) {
-                        prefs().edit().putBoolean(accountTtlKey(userId), true).apply();
-                        clearTtlPending(userId);
-                    }
-                });
+                send(account, req, accountDoneKey(userId), userId);
+            }
+            if (force || !p.getBoolean(birthdayDoneKey(userId), false)) {
+                final TL_account.setPrivacy req = new TL_account.setPrivacy();
+                req.key = new TLRPC.TL_inputPrivacyKeyBirthday();
+                req.rules.add(new TLRPC.TL_inputPrivacyValueAllowAll());
+                send(account, req, birthdayDoneKey(userId), userId);
             }
         } catch (Throwable e) {
             FileLog.e(e);
         }
     }
 
-    private static void clearTtlPending(long userId) {
+    /** Marks doneKey only when the server accepted the change. */
+    private static void send(int account, org.telegram.tgnet.TLObject req, String doneKey, long userId) {
+        org.telegram.tgnet.ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
+            if (error == null) {
+                prefs().edit().putBoolean(doneKey, true).apply();
+                clearPending(userId);
+                if (response instanceof TL_account.privacyRules) {
+                    final TL_account.privacyRules rules = (TL_account.privacyRules) response;
+                    AndroidUtilities.runOnUIThread(() -> {
+                        MessagesController.getInstance(account).putUsers(rules.users, false);
+                        MessagesController.getInstance(account).putChats(rules.chats, false);
+                        ContactsController.getInstance(account).setPrivacyRules(rules.rules, ContactsController.PRIVACY_RULES_TYPE_BIRTHDAY);
+                    });
+                }
+            }
+        });
+    }
+
+    private static void clearPending(long userId) {
         final SharedPreferences p = prefs();
-        if (p.getBoolean(sessionTtlKey(userId), false) && p.getBoolean(accountTtlKey(userId), false)) {
-            p.edit().remove(ttlPendingKey(userId)).apply();
+        if (p.getBoolean(sessionDoneKey(userId), false)
+                && p.getBoolean(accountDoneKey(userId), false)
+                && p.getBoolean(birthdayDoneKey(userId), false)) {
+            p.edit().remove(pendingKey(userId)).apply();
         }
     }
 
-    /** How many logged-in accounts still have neither TTL set — for the Settings line. */
-    public static int ttlAccountsPending() {
+    /** How many logged-in accounts have not had all three applied — for the Settings line. */
+    public static int accountsPendingDefaults() {
         if (ApplicationLoader.applicationContext == null) {
             return 0;
         }
@@ -560,7 +578,9 @@ public class ChihuahuaConfig {
                 continue;
             }
             final long userId = config.getClientUserId();
-            if (userId != 0 && !(p.getBoolean(sessionTtlKey(userId), false) && p.getBoolean(accountTtlKey(userId), false))) {
+            if (userId != 0 && !(p.getBoolean(sessionDoneKey(userId), false)
+                    && p.getBoolean(accountDoneKey(userId), false)
+                    && p.getBoolean(birthdayDoneKey(userId), false))) {
                 pending++;
             }
         }
