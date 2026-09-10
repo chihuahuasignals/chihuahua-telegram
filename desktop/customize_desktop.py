@@ -518,6 +518,24 @@ def patch_age_badge():
     ])
 
 
+HISTORY_WIDGET = "Telegram/SourceFiles/history/history_widget.cpp"
+
+
+def patch_scroll_preload():
+    """Wheel scrolling through a busy group stalls: Telegram asks for the next 50 messages only
+    once you are within 3 screens of the end of what is loaded, so a fast scroll reaches the edge
+    of the loaded range and simply stops until the reply arrives — it moves again if you go slowly
+    enough for each slice to land. Fetch twice as much, twice as far ahead."""
+    edit(HISTORY_WIDGET, [
+        ("constexpr auto kMessagesPerPage = 50;\n",
+         "constexpr auto kMessagesPerPage = 100; // Chihuahua: was 50. The server caps the slice\n"
+         "                                       // it returns, so asking for more is safe.\n", 1),
+        ("constexpr auto kPreloadHeightsCount = 3; // when 3 screens to scroll left make a preload request\n",
+         "constexpr auto kPreloadHeightsCount = 6; // Chihuahua: was 3 screens; ask earlier so a fast\n"
+         "                                         // wheel does not outrun the loading\n", 1),
+    ])
+
+
 PEER_MENU = "Telegram/SourceFiles/window/window_peer_menu.cpp"
 
 ADMINS_CODE = """void Filler::addChihuahuaAdmins() {
@@ -633,6 +651,7 @@ def patch_account_id():
          + '\t\tauto label = user->isBot()\n\t\t\t? tr::lng_info_about_label()\n\t\t\t: tr::lng_info_bio_label();\n', 1),
     ])
     patch_age_badge()
+    patch_scroll_preload()
 
 
 def patch_moderation():
