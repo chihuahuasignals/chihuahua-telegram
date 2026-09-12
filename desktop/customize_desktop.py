@@ -578,14 +578,26 @@ ONLINE_TIMER = """\t} else if (const auto channel = peer->asChannel()) {
 """
 
 ONLINE_REFRESH = """void TopBarWidget::chihuahuaRefreshOnline(not_null<PeerData*> peer) {
-\t// Chihuahua: at most one channelFull request a minute per group.
+\t// Chihuahua: messages.getOnlines is the call the phone makes for the
+\t// online figure of a big group (every five minutes while the chat is
+\t// open). channelFull's online_count is not sent for groups this size,
+\t// so asking for the full peer again showed nothing. Once a minute.
 \tconst auto now = crl::now();
-\tif (_chihuahuaOnlinePeer != peer.get()
-\t\t|| now - _chihuahuaOnlineAsked > 60 * crl::time(1000)) {
-\t\t_chihuahuaOnlinePeer = peer.get();
-\t\t_chihuahuaOnlineAsked = now;
-\t\tsession().api().requestFullPeer(peer);
+\tif (_chihuahuaOnlinePeer == peer.get()
+\t\t&& now - _chihuahuaOnlineAsked <= 60 * crl::time(1000)) {
+\t\treturn;
 \t}
+\t_chihuahuaOnlinePeer = peer.get();
+\t_chihuahuaOnlineAsked = now;
+\tconst auto channel = peer->asChannel();
+\tif (!channel) {
+\t\treturn;
+\t}
+\tsession().api().request(MTPmessages_GetOnlines(
+\t\tpeer->input()
+\t)).done([=](const MTPchatOnlines &result) {
+\t\tchannel->chihuahuaSetOnlineCount(result.data().vonlines().v);
+\t}).send();
 }
 
 """
@@ -594,8 +606,9 @@ ONLINE_REFRESH = """void TopBarWidget::chihuahuaRefreshOnline(not_null<PeerData*
 def patch_online_count():
     """Members and online count at the top of a big group, as on the phone. Telegram Desktop
     works the online figure out itself from the ~200 members it has loaded, so for any group
-    above that size it shows only the member count — although the server sends online_count
-    in channelFull, which the desktop app never read. Store it, show it, refresh it."""
+    above that size it shows only the member count. The phone asks messages.getOnlines, a
+    one-int call Telegram Desktop has in its scheme but never makes; this makes it, once a
+    minute while a big group is on screen, and shows the answer."""
     edit(CHANNEL_H, [
         ("\tvoid setAdminsCount(int newAdminsCount);\n",
          "\tvoid setAdminsCount(int newAdminsCount);\n"
