@@ -167,7 +167,7 @@ that ID). Both apps read the same anchor table out of `patches/ChihuahuaConfig.j
 estimates cannot drift apart (`customize_desktop.py` generates `Telegram/SourceFiles/chihuahua_age.h`
 from it). In group chats a sender under three months old gets ` · new` or ` · 2mo` after their name —
 plain, not red, and shown only for new accounts, so the badge appearing at all is the warning.
-**Admins** is in a group or channel's ⋮ menu here too. In Settings, a left click on your phone number copies it (the right-click menu still has Copy Phone Number). The Android app is Java and the desktop app is
+**Admins** is in a group or channel's ⋮ menu here too. A big group's title bar shows **members, online** as the phone does — Telegram Desktop only counted online among the ~200 members it had loaded, so above that size it showed the member count alone, although the server sends the online figure; it is refreshed once a minute while the group is open. Scrolling through a busy group no longer stalls on the wheel: history is fetched 100 messages at a time, 6 screens ahead, instead of 50 and 3. In Settings, a left click on your phone number copies it (the right-click menu still has Copy Phone Number). The Android app is Java and the desktop app is
 C++/Qt, so nothing ports across: every feature is written twice. Still only on Android:
 Settings → Chihuahua, so on desktop the age threshold is fixed at three months and every feature is
 always on. Two Android features have no desktop equivalent and never will — the
