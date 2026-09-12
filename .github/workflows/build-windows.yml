@@ -270,7 +270,9 @@ jobs:
           cp "$OUT/Telegram.exe" "artifact/${SAFE_NAME}.exe"
           cat > artifact/README.txt <<EOF
           $APP_NAME for Windows (64-bit), based on Telegram Desktop $VERSION.
-          Portable: put ${SAFE_NAME}.exe in any folder and run it. Data is kept in %APPDATA%\\$APP_NAME.
+          Built from commit ${GITHUB_SHA:0:10}.
+          Portable: put ${SAFE_NAME}.exe in any folder and run it. Its data (logins, cache) lives in a
+          tdata folder next to the .exe, so to update, put the new .exe in the same folder as the old one.
           Windows SmartScreen may warn because the file is not signed: More info -> Run anyway.
           EOF
           ZIP="${SAFE_NAME}-${VERSION}-win64.zip"
@@ -299,10 +301,14 @@ jobs:
         run: |
           set -euo pipefail
           TAG="desktop-v${{ steps.pack.outputs.version }}-build${{ github.run_number }}"
+          # --target pins the tag to the commit this run built. Without it, gh tags whatever the
+          # default branch's HEAD is at release time, which after back-to-back pushes was a
+          # different commit from the one in the zip.
           gh release create "$TAG" "${{ steps.pack.outputs.zip }}" SHA256SUMS-desktop.txt \
             --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
             --title "$APP_NAME for Windows ${{ steps.pack.outputs.version }} (build ${{ github.run_number }})" \
-            --notes "Telegram Desktop ${{ steps.pack.outputs.version }} source. Max accounts: ${MAX_ACCOUNTS}. Unzip and run the .exe (portable). SmartScreen: More info -> Run anyway."
+            --notes "Telegram Desktop ${{ steps.pack.outputs.version }} source, built from ${GITHUB_SHA:0:10}. Max accounts: ${MAX_ACCOUNTS}. Unzip and run the .exe (portable: its data lives in a tdata folder next to the .exe, so put a new .exe in the same folder as the old one). SmartScreen: More info -> Run anyway."
           echo "- Release: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" >> $GITHUB_STEP_SUMMARY
 
       - name: Dispatch the app build now that the libraries are cached.
