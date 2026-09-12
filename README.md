@@ -152,9 +152,11 @@ and 32-account limit, from `desktop/customize_desktop.py`. The third-party libra
 a Release app cannot link against the Debug-only libraries Telegram's own CI builds) take ~2-3 hours to
 compile the first time and are then cached; a run that compiled them stops there and automatically starts
 a second run, which produces the app from the cached libraries in ~1-2 hours.
-Releases are tagged `desktop-v…`; unzip and run the .exe (portable, data in `%APPDATA%\Chihuahua 1`).
-The data folder is named after the app, so an existing install must have `%APPDATA%\Chihuahua Telegram`
-renamed to `%APPDATA%\Chihuahua 1` before the renamed .exe is first run, or it starts logged out.
+Releases are tagged `desktop-v…`; unzip and run the .exe. It is portable: on Windows, Telegram Desktop
+keeps its data in a `tdata` folder **next to the .exe** whenever that folder is writable, and falls back
+to `%APPDATA%\<app name>` only when it is not (Program Files, say). So to update, unzip the new .exe into
+the same folder as the old one, beside `tdata`, and run it — logins carry over. The app's name is not
+part of that path, so renaming the app changes nothing for an install that runs this way.
 
 The desktop build has the name, icon, 32-account limit and the same three moderation items on a
 message's right-click menu — **Ban, wipe & report**, **Mute, wipe & report**, **Wipe & report** —
