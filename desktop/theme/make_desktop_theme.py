@@ -85,6 +85,10 @@ OVERRIDES = {
     # chat area
     "historyComposeAreaBg": FACE,
     "historyComposeAreaFg": BLACK,
+    # Day Blue's placeholder colours assume a white compose field. On the grey one here the
+    # focused placeholder (#aaaaaa) all but vanished -- "Send anonymously..." could not be read.
+    "placeholderFg": DARK,
+    "placeholderFgActive": "#606060",
     "historyComposeIconFg": DARK,
     "historyPeerUserpicFg": WHITE,
     "historyScrollBg": LIGHT,
