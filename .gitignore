@@ -1,1 +1,3 @@
 __pycache__/
+# the photos the icon cut-outs were made from stay out of the (public) repository
+icons/source/*_src.jpg

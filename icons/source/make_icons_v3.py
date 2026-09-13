@@ -5,7 +5,7 @@ Windows 98 title-bar colours of the Chihuahua 98 theme — with the dog's head p
 the ears breaking out over the bubble's rim.  Everything is drawn from the soft-edged cut-out
 (cutout_u2net.png) at 2048 px and downsampled, so every size is crisp.
 
-Usage: python3 make_icons_v3.py [one|two] [outdir]   ("one" -> icons/, "two" -> icons2/)
+Usage: python3 make_icons_v3.py [one|two|three|four] [outdir]   ("one" -> icons/, "two" -> icons2/, ...)
 Writes the same file set the build expects: background-*/foreground-* (adaptive icon layers),
 launcher-*/launcher_round-* (legacy 48 dp icons), dr-*.webp, preview.png.
 """
@@ -19,9 +19,10 @@ from scipy import ndimage
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # ---- which dog -----------------------------------------------------------------------------------
-# One entry per app. The two dogs are shaped differently — a fluffy pomeranian-ish head whose ear
-# tufts stand up, and a papillon-ish head with long ears that hang out sideways — so each gets its
-# own scale, its own place on the canvas and its own idea of where the head may cross the rim.
+# One entry per app. The heads are all shaped differently — a fluffy pomeranian-ish head whose ear
+# tufts stand up, a papillon-ish head with long ears that hang out sideways, a cat, a sleeping
+# papillon with one ear up and one flat — so each gets its own scale, its own place on the canvas
+# and its own idea of where the head may cross the rim.
 PROFILES = {
     "one": dict(                       # Chihuahua Telegram
         file="cutout_u2net.png",
@@ -54,6 +55,20 @@ PROFILES = {
         reach=1.8, fade=2.6,
         out="../../icons3",
     ),
+    "four": dict(                      # Chihuahua 4 — the sleeping papillon
+        # cutout4_sam.png is already levelled (the photo has the head lying 22 degrees over)
+        # and given a neck under the chin, see cutout4_sam.py
+        file="cutout4_sam.png",
+        scale=0.027,
+        anchor=(1078, 1498),
+        at=(55.0, 52.0),
+        above=44.0,
+        reach=1.2, fade=2.6,
+        # only the upright ear breaks out of the bubble; the ear lying flat to the right would
+        # cross the rim as a wide smear, so the rim clips it like a portrait frame instead
+        left_of=60.0,
+        out="../../icons4",
+    ),
 }
 
 # ---- palette (Chihuahua 98: navy title bar -> bright blue) --------------------------------------
@@ -71,6 +86,7 @@ TAIL_TIP = (31.2, 76.8)            # inside the safe circle (dist from (54,54) =
 TAIL_ANGLES = (118.0, 154.0)       # where the tail meets the circle (degrees, y down)
 DOG_FILE = DOG_SCALE = DOG_ANCHOR = DOG_AT = DOG_OUT = None
 OVERFLOW_ABOVE = OVERFLOW_REACH = OVERFLOW_FADE = None
+OVERFLOW_LEFT_OF = None            # optional: only left of this x (dp) may the dog leave the bubble
 
 _dog = None
 
@@ -78,11 +94,12 @@ _dog = None
 def use_profile(name):
     """Switch which chihuahua (and which icons/ folder) the generator works with."""
     global DOG_FILE, DOG_SCALE, DOG_ANCHOR, DOG_AT, DOG_OUT, _dog
-    global OVERFLOW_ABOVE, OVERFLOW_REACH, OVERFLOW_FADE
+    global OVERFLOW_ABOVE, OVERFLOW_REACH, OVERFLOW_FADE, OVERFLOW_LEFT_OF
     p = PROFILES[name]
     DOG_FILE, DOG_SCALE, DOG_ANCHOR = p["file"], p["scale"], p["anchor"]
     DOG_AT, DOG_OUT = p["at"], p["out"]
     OVERFLOW_ABOVE, OVERFLOW_REACH, OVERFLOW_FADE = p["above"], p["reach"], p["fade"]
+    OVERFLOW_LEFT_OF = p.get("left_of")
     _dog = None
 
 
@@ -207,6 +224,8 @@ def bubble(size):
     dog_layer.alpha_composite(d, (x, yy))
     clip = np.asarray(mask, np.float32) / 255.0
     above = (np.mgrid[0:size, 0:size][0] < OVERFLOW_ABOVE * s).astype(np.float32)
+    if OVERFLOW_LEFT_OF is not None:
+        above *= (np.mgrid[0:size, 0:size][1] < OVERFLOW_LEFT_OF * s).astype(np.float32)
     # feather the transition between "clipped to bubble" and "free" so no hard line can show
     above = ndimage.gaussian_filter(above, 1.5 * s)
     # outside the bubble the ears may cross the outline and a little beyond, then fade out, so

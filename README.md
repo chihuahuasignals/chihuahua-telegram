@@ -51,19 +51,20 @@ Your own build of Telegram for Android with the account limit raised (32 account
 Nothing else in Telegram is changed. Built on GitHub's servers from the official
 [DrKLO/Telegram](https://github.com/DrKLO/Telegram) source (GPL v2).
 
-## Three apps
+## Four apps
 
-Every build produces **three** APKs from the same code: `Chihuahua1-….apk`, `Chihuahua2-….apk` and
-`Chihuahua3-….apk`. The application id differs (`com.chihuahua.messenger`, `…2`, `…3`), so Android
-treats them as separate apps and installs them side by side: 32 accounts each, their own
-notifications, their own settings. Install any or all; they update independently from the same
-release. Each has its own animal on the icon — two dogs and a cat.
+Every build produces **four** APKs from the same code: `Chihuahua1-….apk`, `Chihuahua2-….apk`,
+`Chihuahua3-….apk` and `Chihuahua4-….apk`. The application id differs (`com.chihuahua.messenger`,
+`…2`, `…3`, `…4`), so Android treats them as separate apps and installs them side by side: 32
+accounts each, their own notifications, their own settings. Install any or all; they update
+independently from the same release. Each has its own animal on the icon — three dogs and a cat.
 
 `config.env` gives every app after the first a block of `APP<n>_` settings, and any of them
 overrides the plain setting for that app alone; anything the block does not mention stays the same
 as app one. That is the whole mechanism, so a new app is a block of five lines plus an icon folder.
 
-**Chihuahua 3** uses it for two things the others do not do:
+**Chihuahua 3** and **Chihuahua 4** (the same app under a second name and icon, so a second
+phone-full of accounts can run it) use it for two things the others do not do:
 
 - After a login it offers to set up **Two-Step Verification** (once per account — answer either way
   and it does not come back, and it never asks for an account that already has a password).
@@ -72,7 +73,7 @@ as app one. That is the whole mechanism, so a new app is a block of five lines p
   nothing is tried twice and a restart carries on where it stopped. A Telegram rate limit parks that
   account until the app is started again rather than being retried into a harder limit.
   **Settings → Chihuahua → New accounts** shows how many are left and taps to resume. Clear
-  `APP3_AUTO_JOIN` and it joins nothing.
+  `APP3_AUTO_JOIN` (or `APP4_AUTO_JOIN`) and that app joins nothing.
 
   Worth knowing before you use it: many accounts on one phone joining the same list of groups is the
   shape Telegram's anti-spam is built to notice, whatever the accounts are for. The pacing helps; it
@@ -116,11 +117,13 @@ Edit `config.env` on GitHub (pencil icon), commit, and a new build starts automa
 - `TELEGRAM_COMMIT` — which Telegram version to build. To update to a newer Telegram, put the newest
   commit id from https://github.com/DrKLO/Telegram/commits/master here. If Telegram moved things
   around, the build fails with a clear "anchor found 0x" message in `customize.py` — that needs a small fix.
-- `icons/` and `icons2/` — the launcher icons: each dog inside a chat bubble on the theme's navy-to-blue.
-  `icons/source/make_icons_v3.py one|two` regenerates a set from that dog's background-removed photo
-  (`cutout_u2net.png`, `cutout2_u2net.png`) — scale, framing and how far the ears may cross the rim are
-  per-dog settings in its `PROFILES` table. `make_desktop_icons.py` builds the Windows set from dog one;
-  the older sunset-sticker design is still there as `make_icons_v2.py`.
+- `icons/`, `icons2/`, `icons3/`, `icons4/` — the launcher icons: each animal inside a chat bubble on
+  the theme's navy-to-blue. `icons/source/make_icons_v3.py one|two|three|four` regenerates a set from
+  that animal's background-removed photo (`cutout_u2net.png`, `cutout2_u2net.png`, `cutout3_u2net.png`,
+  `cutout4_sam.png` — the last one made by `cutout4_sam.py`, which levels the sleeping dog's head and
+  gives it a neck) — scale, framing and where the ears may cross the rim are per-animal settings in
+  its `PROFILES` table. `make_desktop_icons.py` builds the Windows set from dog one; the older
+  sunset-sticker design is still there as `make_icons_v2.py`.
 
 You can also press **Actions → Build Android APK → Run workflow** to rebuild without changing anything.
 
