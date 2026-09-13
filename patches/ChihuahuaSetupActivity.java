@@ -52,6 +52,7 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
     private static final int ID_DELETE_TTL = 7;
     private static final int ID_CONTACTS = 8;
     private static final int ID_PROMO_GROUP = 9;
+    private static final int ID_DEVICES = 10;
 
     /** A group promoted at the top of this page; set from config.env. Empty = no row. */
     private static final String PROMO_GROUP = "%%PROMO_GROUP%%";
@@ -73,6 +74,10 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
 
     private TL_account.Password currentPassword;
     private int authTtlDays;
+
+    /** Telegram's Devices screen, created early so its session count can sit on the row (the
+     *  same trick Privacy and Security uses); tapping the row presents this very instance. */
+    private SessionsActivity devices;
 
     public ChihuahuaSetupActivity() {
         super();
@@ -97,7 +102,21 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
         loadUserInfo();
         loadPassword();
         loadSessionTtl();
+        devices = new SessionsActivity(SessionsActivity.TYPE_DEVICES);
+        devices.setCurrentAccount(currentAccount);
+        devices.setDelegate(this::update);
+        devices.loadSessions(false);
         return super.onFragmentCreate();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // back from the Devices screen (or anywhere): the count on the row may have changed
+        if (devices != null) {
+            devices.loadSessions(true);
+        }
+        update();
     }
 
     @Override
@@ -197,7 +216,10 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
             currentPassword != null && currentPassword.has_password ? R.drawable.menu_2sv_on : R.drawable.menu_2sv,
             LocaleController.getString(R.string.TwoStepVerification), null, twoStepValue()));
         items.add(SettingsActivity.SettingCell.Factory.of(
-            ID_SESSION_TTL, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.settings_devices,
+            ID_DEVICES, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.settings_devices,
+            LocaleController.getString(R.string.Devices), null, devicesValue()));
+        items.add(SettingsActivity.SettingCell.Factory.of(
+            ID_SESSION_TTL, IconBackgroundColors.ORANGE_DEEP.top, IconBackgroundColors.ORANGE_DEEP.bottom, R.drawable.msg_autodelete,
             "Terminate old sessions", "if inactive for", sessionTtlValue()));
         items.add(SettingsActivity.SettingCell.Factory.of(
             ID_DELETE_TTL, IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom, R.drawable.msg_delete,
@@ -237,6 +259,9 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
             openTwoStep();
         } else if (item.id == ID_SESSION_TTL) {
             openSessionTtl();
+        } else if (item.id == ID_DEVICES) {
+            devices.resetFragment();
+            presentFragment(devices);
         } else if (item.id == ID_PRIVACY_LASTSEEN) {
             openPrivacy(ContactsController.PRIVACY_RULES_TYPE_LASTSEEN, LocaleController.getString(R.string.PrivacyLastSeen));
         } else if (item.id == ID_PRIVACY_BIRTHDAY) {
@@ -407,6 +432,15 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
                 update();
             }
         }));
+    }
+
+    /** How many sessions (this one included), blank until the first answer is in. */
+    private String devicesValue() {
+        final int count = devices == null ? 0 : devices.getSessionsCount();
+        if (count <= 0) {
+            return "";
+        }
+        return String.format(LocaleController.getInstance().getCurrentLocale(), "%d", count);
     }
 
     private String sessionTtlValue() {
