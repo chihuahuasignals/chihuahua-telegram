@@ -1,0 +1,41 @@
+Choosing Qt 6.
+[1/31](Libraries/patches): SKIPPING
+[2/31](ThirdParty/msys64): SKIPPING
+[3/31](ThirdParty/python#0.3.12.10): SKIPPING
+[4/31](ThirdParty/NuGet): SKIPPING
+[5/31](ThirdParty/jom): SKIPPING
+[6/31](ThirdParty/gyp): SKIPPING
+[7/31](Libraries/lzma): SKIPPING
+[8/31](Libraries/zlib): SKIPPING
+[9/31](Libraries/mozjpeg): SKIPPING
+[10/31](Libraries/openssl3): SKIPPING
+[11/31](Libraries/opus): SKIPPING
+[12/31](Libraries/rnnoise): SKIPPING
+[13/31](Libraries/gas-preprocessor): Cloning into 'gas-preprocessor'...
+NOT FOUND, BUILDING:
+---------------------------------COMMANDS-LIST----------------------------------
+if exist gas-preprocessor rmdir /Q /S gas-preprocessor
+if exist gas-preprocessor exit /b 1
+git clone https://github.com/FFmpeg/gas-preprocessor
+cd gas-preprocessor
+echo @echo off > cpp.bat
+echo cl %%%%%%** >> cpp.bat
+--------------------------------------------------------------------------------
+[14/31](Libraries/dav1d): SKIPPING
+[15/31](Libraries/openh264): SKIPPING
+[16/31](Libraries/libavif): SKIPPING
+[17/31](Libraries/libde265): SKIPPING
+[18/31](Libraries/libwebp): SKIPPING
+[19/31](Libraries/libheif): SKIPPING
+[20/31](Libraries/libjxl): SKIPPING
+[21/31](Libraries/libvpx): SKIPPING
+[22/31](Libraries/liblcms2): SKIPPING
+[23/31](Libraries/nv-codec-headers): SKIPPING
+[24/31](Libraries/regex): SKIPPING
+[25/31](Libraries/ffmpeg): SKIPPING
+[26/31](Libraries/openal-soft): SKIPPING
+[27/31](Libraries/breakpad): SKIPPING
+[28/31](Libraries/qt_6.11.1): SKIPPING
+[29/31](Libraries/tg_owt): SKIPPING
+[30/31](Libraries/ada): SKIPPING
+[31/31](Libraries/tde2e): SKIPPING
