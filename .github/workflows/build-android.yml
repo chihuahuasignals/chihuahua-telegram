@@ -12,6 +12,7 @@ on:
       - icons2/**
       - icons3/**
       - icons4/**
+      - icons5/**
       - .github/workflows/build-android.yml
 
 permissions:
@@ -28,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 355
 
-    # Four apps out of the same source: different application id, so Android installs them
+    # Five apps out of the same source: different application id, so Android installs them
     # side by side. Every APP<n>_ setting in config.env overrides the plain one for that app,
     # which is how they differ at all. All jobs publish into one release.
     strategy:
@@ -47,6 +48,9 @@ jobs:
           - id: four
             prefix: APP4_
             status_branch: build-status-4
+          - id: five
+            prefix: APP5_
+            status_branch: build-status-5
 
     name: Build APK (app ${{ matrix.app.id }})
 
@@ -200,7 +204,7 @@ jobs:
             if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then break; fi
             if gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
                  --title "Chihuahua ${{ steps.collect.outputs.version }} (build ${{ github.run_number }})" \
-                 --notes "Four apps from the same code, install any or all side by side: Chihuahua1-*.apk, Chihuahua2-*.apk, Chihuahua3-*.apk and Chihuahua4-*.apk. Telegram ${{ steps.collect.outputs.version }} source, commit ${TELEGRAM_COMMIT:0:10}. Max accounts: ${MAX_ACCOUNTS} each. ABI: ${BUILD_ABI}. Open this page on your phone and tap an .apk to install."; then break; fi
+                 --notes "Five apps from the same code, install any or all side by side: Chihuahua1-*.apk, Chihuahua2-*.apk, Chihuahua3-*.apk, Chihuahua4-*.apk and Chihuahua5-*.apk. Telegram ${{ steps.collect.outputs.version }} source, commit ${TELEGRAM_COMMIT:0:10}. Max accounts: ${MAX_ACCOUNTS} each. ABI: ${BUILD_ABI}. Open this page on your phone and tap an .apk to install."; then break; fi
             sleep 5
           done
           gh release upload "$TAG" "${{ steps.collect.outputs.apk }}" "${{ steps.collect.outputs.sums }}" \
