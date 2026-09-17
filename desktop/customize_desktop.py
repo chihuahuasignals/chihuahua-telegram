@@ -538,25 +538,59 @@ def patch_scroll_preload():
 
 CHANNEL_H = "Telegram/SourceFiles/data/data_channel.h"
 CHANNEL_CPP = "Telegram/SourceFiles/data/data_channel.cpp"
-TOP_BAR_H = "Telegram/SourceFiles/history/view/history_view_top_bar_widget.h"
 TOP_BAR_CPP = "Telegram/SourceFiles/history/view/history_view_top_bar_widget.cpp"
+STATUS_LABEL = "Telegram/SourceFiles/info/profile/info_profile_status_label.cpp"
+
+ONLINE_CHANNEL_CODE = """void ChannelData::chihuahuaSetOnlineCount(int count) {
+\tif (_chihuahuaOnlineCount != count) {
+\t\t_chihuahuaOnlineCount = count;
+\t\t// Members is the flag the chat's top bar and the profile listen for.
+\t\tsession().changes().peerUpdated(this, UpdateFlag::Members);
+\t}
+}
+
+bool ChannelData::chihuahuaBigGroup() const {
+\t// Above this size Telegram Desktop never holds the whole member list, so
+\t// counting who is online among the members it happens to have loaded says
+\t// nothing and it shows no online figure at all.
+\treturn isMegagroup()
+\t\t&& (membersCount() > session().serverConfig().chatSizeMax);
+}
+
+void ChannelData::chihuahuaRefreshOnlineCount() {
+\t// messages.getOnlines is the call the phone makes for a big group's online
+\t// figure - channelFull's online_count is not sent at this size. It is in
+\t// Telegram Desktop's scheme but never used. One request a minute per group,
+\t// wherever it is asked from: the chat's top bar or the profile panel.
+\tconst auto now = crl::now();
+\tif (_chihuahuaOnlineAsked
+\t\t&& (now - _chihuahuaOnlineAsked <= 60 * crl::time(1000))) {
+\t\treturn;
+\t}
+\t_chihuahuaOnlineAsked = now;
+\tconst auto channel = this;
+\tsession().api().request(MTPmessages_GetOnlines(
+\t\tinput()
+\t)).done([channel](const MTPchatOnlines &result) {
+\t\tchannel->chihuahuaSetOnlineCount(result.data().vonlines().v);
+\t}).send();
+}
+
+"""
 
 ONLINE_BRANCH = """\t} else if (const auto channel = peer->asChannel()) {
-\t\tconst auto chihuahuaBigGroup = channel->isMegagroup()
-\t\t\t&& (channel->membersCount()
-\t\t\t\t> channel->session().serverConfig().chatSizeMax);
+\t\tconst auto chihuahuaBigGroup = channel->chihuahuaBigGroup();
 \t\tif (chihuahuaBigGroup) {
 \t\t\t// Whatever the count says right now - including 0 before the
-\t\t\t// first channelFull has landed - keep asking, once a minute.
-\t\t\tchihuahuaRefreshOnline(channel);
+\t\t\t// first answer has landed - keep asking, once a minute.
+\t\t\tchannel->chihuahuaRefreshOnlineCount();
 \t\t}
 \t\tif (chihuahuaBigGroup
 \t\t\t&& channel->membersCount() > 0
 \t\t\t&& channel->chihuahuaOnlineCount() > 0) {
 \t\t\t// Chihuahua: a big group's online count, as the phone shows it.
 \t\t\t// Telegram Desktop only ever counted online among the last 200
-\t\t\t// members it had fetched, so above that size it showed nothing,
-\t\t\t// although the server sends the figure in channelFull.
+\t\t\t// members it had fetched, so above that size it showed nothing.
 \t\t\tauto membersCount = tr::lng_chat_status_members(tr::now, lt_count_decimal, channel->membersCount());
 \t\t\tauto onlineCount = tr::lng_chat_status_online(tr::now, lt_count, channel->chihuahuaOnlineCount());
 \t\t\ttext = tr::lng_chat_status_members_online(tr::now, lt_members_count, membersCount, lt_online_count, onlineCount);
@@ -565,83 +599,62 @@ ONLINE_BRANCH = """\t} else if (const auto channel = peer->asChannel()) {
 """
 
 ONLINE_TIMER = """\t} else if (const auto channel = peer->asChannel()) {
-\t\t// Chihuahua: the server's online count for a big group is only as
-\t\t// fresh as the last channelFull, so ask again every minute while
-\t\t// the group is on screen.
-\t\tif (channel->isMegagroup()
-\t\t\t&& (channel->membersCount()
-\t\t\t\t> channel->session().serverConfig().chatSizeMax)) {
+\t\t// Chihuahua: a big group's online count only changes when we ask for
+\t\t// it, so keep the display ticking while the group is on screen.
+\t\tif (channel->chihuahuaBigGroup()) {
 \t\t\taccumulate_min(minTimeout, 60 * crl::time(1000));
 \t\t}
 \t}
 \tupdateOnlineDisplayIn(minTimeout);
 """
 
-ONLINE_REFRESH = """void TopBarWidget::chihuahuaRefreshOnline(not_null<PeerData*> peer) {
-\t// Chihuahua: messages.getOnlines is the call the phone makes for the
-\t// online figure of a big group (every five minutes while the chat is
-\t// open). channelFull's online_count is not sent for groups this size,
-\t// so asking for the full peer again showed nothing. Once a minute.
-\tconst auto now = crl::now();
-\tif (_chihuahuaOnlinePeer == peer.get()
-\t\t&& now - _chihuahuaOnlineAsked <= 60 * crl::time(1000)) {
-\t\treturn;
-\t}
-\t_chihuahuaOnlinePeer = peer.get();
-\t_chihuahuaOnlineAsked = now;
-\tconst auto channel = peer->asChannel();
-\tif (!channel) {
-\t\treturn;
-\t}
-\tsession().api().request(MTPmessages_GetOnlines(
-\t\tpeer->input()
-\t)).done([=](const MTPchatOnlines &result) {
-\t\tchannel->chihuahuaSetOnlineCount(result.data().vonlines().v);
-\t}).send();
-}
-
+ONLINE_STATUS_LABEL = """\t\t\t// Chihuahua: the profile panel showed a big group as "N members" and
+\t\t\t// nothing more - its _onlineCount is counted from the members the
+\t\t\t// list has loaded, a fraction of the group at this size. Take the
+\t\t\t// server's figure instead, the same one the chat's top bar shows;
+\t\t\t// the answer arrives as a Members update, which refreshes this label.
+\t\t\tconst auto chihuahuaBigGroup = channel->chihuahuaBigGroup();
+\t\t\tif (chihuahuaBigGroup) {
+\t\t\t\tchannel->chihuahuaRefreshOnlineCount();
+\t\t\t}
+\t\t\tconst auto onlineCount = chihuahuaBigGroup
+\t\t\t\t? std::max(_onlineCount, channel->chihuahuaOnlineCount())
+\t\t\t\t: _onlineCount;
+\t\t\tconst auto fullCount = channel->membersCount();
 """
 
 
 def patch_online_count():
-    """Members and online count at the top of a big group, as on the phone. Telegram Desktop
-    works the online figure out itself from the ~200 members it has loaded, so for any group
-    above that size it shows only the member count. The phone asks messages.getOnlines, a
-    one-int call Telegram Desktop has in its scheme but never makes; this makes it, once a
-    minute while a big group is on screen, and shows the answer."""
+    """Members and online count for a big group, as on the phone - at the top of the chat and
+    on its profile panel. Telegram Desktop works the online figure out itself from the ~200
+    members it has loaded, so for any group above that size it shows only the member count.
+    The phone asks messages.getOnlines, a one-int call Telegram Desktop has in its scheme but
+    never makes; ChannelData makes it here, at most once a minute per group, and both places
+    show the answer."""
     edit(CHANNEL_H, [
         ("\tvoid setAdminsCount(int newAdminsCount);\n",
          "\tvoid setAdminsCount(int newAdminsCount);\n"
-         "\t// Chihuahua: online_count from channelFull, which upstream never read.\n"
+         "\t// Chihuahua: how many members are online, from the server rather than\n"
+         "\t// from the slice of the member list this client happens to hold.\n"
          "\t[[nodiscard]] int chihuahuaOnlineCount() const {\n"
          "\t\treturn _chihuahuaOnlineCount;\n"
          "\t}\n"
-         "\tvoid chihuahuaSetOnlineCount(int count);\n", 1),
+         "\tvoid chihuahuaSetOnlineCount(int count);\n"
+         "\t[[nodiscard]] bool chihuahuaBigGroup() const;\n"
+         "\tvoid chihuahuaRefreshOnlineCount();\n", 1),
         ("\tint _adminsCount = 1;\n",
-         "\tint _adminsCount = 1;\n\tint _chihuahuaOnlineCount = 0;\n", 1),
+         "\tint _adminsCount = 1;\n"
+         "\tint _chihuahuaOnlineCount = 0;\n"
+         "\tcrl::time _chihuahuaOnlineAsked = 0;\n", 1),
     ])
     edit(CHANNEL_CPP, [
+        ('#include "main/main_session.h"\n',
+         '#include "main/main_session.h"\n#include "mtproto/mtproto_config.h"\n', 1),
         ("void ChannelData::setRestrictedCount(int newRestrictedCount) {\n",
-         "void ChannelData::chihuahuaSetOnlineCount(int count) {\n"
-         "\tif (_chihuahuaOnlineCount != count) {\n"
-         "\t\t_chihuahuaOnlineCount = count;\n"
-         "\t\t// Members is what the chat's top bar listens for.\n"
-         "\t\tsession().changes().peerUpdated(this, UpdateFlag::Members);\n"
-         "\t}\n"
-         "}\n\n"
-         "void ChannelData::setRestrictedCount(int newRestrictedCount) {\n", 1),
+         ONLINE_CHANNEL_CODE + "void ChannelData::setRestrictedCount(int newRestrictedCount) {\n", 1),
         ("\tchannel->setAdminsCount(update.vadmins_count().value_or_empty());\n",
          "\tchannel->setAdminsCount(update.vadmins_count().value_or_empty());\n"
          "\tchannel->chihuahuaSetOnlineCount(update.vonline_count().value_or_empty());\n", 1),
-    ])
-    edit(TOP_BAR_H, [
-        ("\tvoid updateOnlineDisplayIn(crl::time timeout);\n",
-         "\tvoid updateOnlineDisplayIn(crl::time timeout);\n"
-         "\tvoid chihuahuaRefreshOnline(not_null<PeerData*> peer);\n", 1),
-        ("\tbase::Timer _onlineUpdater;\n",
-         "\tbase::Timer _onlineUpdater;\n"
-         "\tPeerData *_chihuahuaOnlinePeer = nullptr;\n"
-         "\tcrl::time _chihuahuaOnlineAsked = 0;\n", 1),
     ])
     edit(TOP_BAR_CPP, [
         ("\t} else if (const auto channel = peer->asChannel()) {\n"
@@ -650,8 +663,11 @@ def patch_online_count():
          ONLINE_BRANCH, 1),
         ("\t} else if (peer->isChannel()) {\n\t}\n\tupdateOnlineDisplayIn(minTimeout);\n",
          ONLINE_TIMER, 1),
-        ("void TopBarWidget::updateOnlineDisplayTimer() {\n",
-         ONLINE_REFRESH + "void TopBarWidget::updateOnlineDisplayTimer() {\n", 1),
+    ])
+    edit(STATUS_LABEL, [
+        ("\t\t\tconst auto onlineCount = _onlineCount;\n"
+         "\t\t\tconst auto fullCount = channel->membersCount();\n",
+         ONLINE_STATUS_LABEL, 1),
     ])
 
 
