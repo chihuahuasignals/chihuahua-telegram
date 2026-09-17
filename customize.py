@@ -1031,6 +1031,67 @@ def patch_theme98():
     patch_group_age_badge()
     patch_quick_ban()
     patch_foreground_connection()
+    patch_forward_flow()
+
+
+def patch_forward_flow():
+    """Forwarding, the way it is used here: hold a message, Forward, tick the groups, Send.
+    (1) The bar under selected messages has only Forward - the Reply button is gone and Forward
+    takes the row. (2) In "Forward to..." a tap ticks a chat instead of picking it, so several
+    can be ticked and sent to in one go; Telegram had this but only behind a long press. Forum
+    and community chats still open their topic list, and the reply-to / quote-to pickers are
+    untouched. (3) Forwards go out without the "Forwarded from" header by default - the field
+    panel's Show Sender Name and the share sheet's long-press menu still switch it back on."""
+    ui = "TMessagesProj/src/main/java/org/telegram/ui/"
+    edit(ui + "Components/chat/layouts/ChatActivityActionsButtonsLayout.java", [
+        ("        addView(replyButton.button, LayoutHelper.createLinear(0, 56, 1f, 1, 0, -1, 0));\n"
+         "        addView(forwardButton.button, LayoutHelper.createLinear(0, 56, 1f, -1, 0, 1, 0));\n",
+         "        // Chihuahua: no Reply under selected messages; Forward takes the whole row.\n"
+         "        addView(forwardButton.button, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 56));\n", 1),
+    ])
+    edit(ui + "DialogsActivity.java", [
+        ("            if ((!getMessagesController().isForum(dialogId) && !getMessagesController().isCommunity(dialogId) || isBotForumWithEmptyTopics(dialogId)) && (!selectedDialogs.isEmpty() || (initialDialogsType == DIALOGS_TYPE_FORWARD && selectAlertString != null))) {\n",
+         "            // Chihuahua: in Forward to... a tap ticks the chat rather than picking it, so\n"
+         "            // several can be ticked and sent to at once (Telegram keeps this behind a\n"
+         "            // long press). Reply-to and quote-to pickers keep the one-tap pick.\n"
+         "            if ((!getMessagesController().isForum(dialogId) && !getMessagesController().isCommunity(dialogId) || isBotForumWithEmptyTopics(dialogId)) && (!selectedDialogs.isEmpty() || (initialDialogsType == DIALOGS_TYPE_FORWARD && (selectAlertString != null || !isReplyTo && !isQuote)))) {\n", 1),
+    ])
+    edit(ui + "ChatActivity.java", [
+        ("                messagePreviewParams = null;\n"
+         "                hideFieldPanel(false);\n"
+         "                for (int a = 0; a < dids.size(); a++) {\n",
+         "                // Chihuahua: no \"Forwarded from\" header unless Show Sender Name was\n"
+         "                // switched on in the field panel before Change Recipient.\n"
+         "                final boolean chihuahuaHideSenders = messagePreviewParams == null || messagePreviewParams.hideForwardSendersName;\n"
+         "                messagePreviewParams = null;\n"
+         "                hideFieldPanel(false);\n"
+         "                for (int a = 0; a < dids.size(); a++) {\n", 1),
+        ("                    getSendMessagesHelper().sendMessage(fmessages, did, false, false, notify, scheduleDate, scheduleRepeatPeriod, null, -1, price == null ? 0 : price, getSendMonoForumPeerId(), getSendMessageSuggestionParams());\n",
+         "                    getSendMessagesHelper().sendMessage(fmessages, did, chihuahuaHideSenders, false, notify, scheduleDate, scheduleRepeatPeriod, null, -1, price == null ? 0 : price, getSendMonoForumPeerId(), getSendMessageSuggestionParams());\n", 1),
+    ])
+    edit("TMessagesProj/src/main/java/org/telegram/messenger/MessagePreviewParams.java", [
+        ("    public MessagePreviewParams(boolean secret, boolean noforwards, boolean monoforum) {\n"
+         "        this.isSecret = secret;\n"
+         "        this.noforwards = secret || noforwards;\n"
+         "        this.monoforum = monoforum;\n"
+         "    }\n",
+         "    public MessagePreviewParams(boolean secret, boolean noforwards, boolean monoforum) {\n"
+         "        this.isSecret = secret;\n"
+         "        this.noforwards = secret || noforwards;\n"
+         "        this.monoforum = monoforum;\n"
+         "        // Chihuahua: forwards leave without the \"Forwarded from\" header unless the\n"
+         "        // field panel's Show Sender Name is switched on.\n"
+         "        this.hideForwardSendersName = true;\n"
+         "    }\n", 1),
+    ])
+    edit(ui + "Components/ShareAlert.java", [
+        ("    private boolean showSendersName = true;\n",
+         "    private boolean showSendersName = false; // Chihuahua: hidden by default, as in the field panel\n", 1),
+        ("            showSendersNameView.setTextAndIcon(false ? LocaleController.getString(R.string.ShowSenderNames) : LocaleController.getString(R.string.ShowSendersName), 0);\n"
+         "            showSendersNameView.setChecked(showSendersName = true);\n",
+         "            showSendersNameView.setTextAndIcon(false ? LocaleController.getString(R.string.ShowSenderNames) : LocaleController.getString(R.string.ShowSendersName), 0);\n"
+         "            showSendersNameView.setChecked(showSendersName);\n", 1),
+    ])
 
 
 def patch_per_account_notifications():
