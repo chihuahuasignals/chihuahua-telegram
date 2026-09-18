@@ -5,7 +5,7 @@ Windows 98 title-bar colours of the Chihuahua 98 theme — with the dog's head p
 the ears breaking out over the bubble's rim.  Everything is drawn from the soft-edged cut-out
 (cutout_u2net.png) at 2048 px and downsampled, so every size is crisp.
 
-Usage: python3 make_icons_v3.py [one|two|three|four|five] [outdir]   ("one" -> icons/, "two" -> icons2/, ...)
+Usage: python3 make_icons_v3.py [one|two|three|four|five|nine] [outdir]   ("one" -> icons/, "two" -> icons2/, ...)
 Writes the same file set the build expects: background-*/foreground-* (adaptive icon layers),
 launcher-*/launcher_round-* (legacy 48 dp icons), dr-*.webp, preview.png.
 """
@@ -80,6 +80,19 @@ PROFILES = {
         above=42.0,
         reach=1.2, fade=2.6,
         out="../../icons5",
+    ),
+    "nine": dict(                      # Chihuahua 9 — both dogs, cheek to cheek
+        # two heads side by side (cutout9_u2net.py fills the pillow between their chests), so
+        # the scale is about half the single-head ones and the anchor is where the cheeks meet.
+        # The photo's frame cuts the ears at the top, so nothing may leave the bubble: the rim
+        # crops the heads like a portrait, as it does for dog two.
+        file="cutout9_u2net.png",
+        scale=0.022,
+        anchor=(1580, 1200),
+        at=(55.0, 50.0),
+        above=0.0,
+        reach=1.2, fade=2.6,
+        out="../../icons9",
     ),
 }
 

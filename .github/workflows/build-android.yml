@@ -13,6 +13,7 @@ on:
       - icons3/**
       - icons4/**
       - icons5/**
+      - icons9/**
       - .github/workflows/build-android.yml
 
 permissions:

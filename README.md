@@ -64,8 +64,8 @@ Every build produces **six** APKs from the same code: `Chihuahua1-….apk` … `
 `Chihuahua9-….apk`. The application id differs (`com.chihuahua.messenger`, `…2`, `…3`, `…4`, `…5`,
 `…9`), so Android treats them as separate apps and installs them side by side: 32 accounts each,
 their own notifications, their own settings. Install any or all; they update independently from
-the same release. Each has its own animal on the icon — four dogs and a cat (Chihuahua 9 shares
-the cat with Chihuahua 3).
+the same release. Each has its own animal on the icon — four dogs, a cat, and both dogs together
+on Chihuahua 9.
 
 `config.env` gives every app after the first a block of `APP<n>_` settings, and any of them
 overrides the plain setting for that app alone; anything the block does not mention stays the same
@@ -131,12 +131,14 @@ Edit `config.env` on GitHub (pencil icon), commit, and a new build starts automa
 - `TELEGRAM_COMMIT` — which Telegram version to build. To update to a newer Telegram, put the newest
   commit id from https://github.com/DrKLO/Telegram/commits/master here. If Telegram moved things
   around, the build fails with a clear "anchor found 0x" message in `customize.py` — that needs a small fix.
-- `icons/`, `icons2/` … `icons5/` — the launcher icons: each animal inside a chat bubble on the
-  theme's navy-to-blue. `icons/source/make_icons_v3.py one|two|three|four|five` regenerates a set
-  from that animal's background-removed photo (`cutout_u2net.png`, `cutout2_u2net.png`,
-  `cutout3_u2net.png`, `cutout4_sam.png`, `cutout5_u2net.png` — the last two made by `cutout4_sam.py`,
-  which levels the sleeping dog's head and gives it a neck, and `cutout5_u2net.py`) — scale, framing
-  and where the ears may cross the rim are per-animal settings in its `PROFILES` table.
+- `icons/`, `icons2/` … `icons5/`, `icons9/` — the launcher icons: each animal inside a chat bubble
+  on the theme's navy-to-blue. `icons/source/make_icons_v3.py one|two|three|four|five|nine`
+  regenerates a set from that animal's background-removed photo (`cutout_u2net.png`,
+  `cutout2_u2net.png`, `cutout3_u2net.png`, `cutout4_sam.png`, `cutout5_u2net.png`,
+  `cutout9_u2net.png` — the last three made by `cutout4_sam.py`, which levels the sleeping dog's
+  head and gives it a neck, `cutout5_u2net.py`, and `cutout9_u2net.py`, which fills the pillow
+  between the two dogs' chests) — scale, framing and where the ears may cross the rim are
+  per-animal settings in its `PROFILES` table.
   `make_desktop_icons.py` builds the Windows set from dog one; the older sunset-sticker design is
   still there as `make_icons_v2.py`.
 
