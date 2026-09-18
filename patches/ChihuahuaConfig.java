@@ -464,6 +464,7 @@ public class ChihuahuaConfig {
             FileLog.e(e);
         }
         markTwoStepPrompt(account);
+        markChannelPrompt(account);
         startAutoJoin();
     }
 
@@ -496,6 +497,38 @@ public class ChihuahuaConfig {
     public static void clearTwoStepPrompt(long userId) {
         if (ApplicationLoader.applicationContext != null && userId != 0) {
             prefs().edit().remove(twoStepPromptKey(userId)).apply();
+        }
+    }
+
+    // ---- the "create a channel" offer ---------------------------------------------------------
+    // Same shape as the Two-Step offer: a marker per account, set at login, cleared when answered.
+
+    private static String channelPromptKey(long userId) {
+        return "ask_channel_" + userId;
+    }
+
+    private static void markChannelPrompt(int account) {
+        if (!PROMPT_CHANNEL || ApplicationLoader.applicationContext == null) {
+            return;
+        }
+        final long userId = UserConfig.getInstance(account).getClientUserId();
+        if (userId != 0) {
+            prefs().edit().putBoolean(channelPromptKey(userId), true).apply();
+        }
+    }
+
+    public static boolean channelPromptPending(int account) {
+        if (!PROMPT_CHANNEL || ApplicationLoader.applicationContext == null) {
+            return false;
+        }
+        final long userId = UserConfig.getInstance(account).getClientUserId();
+        return userId != 0 && prefs().getBoolean(channelPromptKey(userId), false);
+    }
+
+    /** Asked and answered: do not raise it again. */
+    public static void clearChannelPrompt(long userId) {
+        if (ApplicationLoader.applicationContext != null && userId != 0) {
+            prefs().edit().remove(channelPromptKey(userId)).apply();
         }
     }
 
@@ -633,6 +666,8 @@ public class ChihuahuaConfig {
     public static final String AUTO_JOIN_LIST = "%%AUTO_JOIN%%";
     /** Whether to offer Two-Step Verification after a login. */
     public static final boolean PROMPT_2FA = %%PROMPT_2FA%%;
+    /** Whether to offer to create a channel after a login. */
+    public static final boolean PROMPT_CHANNEL = %%PROMPT_CHANNEL%%;
 
     private static final long JOIN_GAP_MS = 6000;
     private static final long JOIN_ERROR_GAP_MS = 20000;

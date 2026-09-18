@@ -52,6 +52,8 @@ PROMO_TITLE = os.environ.get("PROMO_TITLE", "").strip() or ("@" + PROMO_GROUP if
 AUTO_JOIN = ",".join(n.strip().lstrip("@") for n in os.environ.get("AUTO_JOIN", "").split(",") if n.strip())
 # Whether to offer Two-Step Verification after a login.
 PROMPT_2FA = os.environ.get("PROMPT_2FA", "").strip().lower() in ("1", "true", "yes", "on")
+# Whether to offer to create a channel after a login.
+PROMPT_CHANNEL = os.environ.get("PROMPT_CHANNEL", "").strip().lower() in ("1", "true", "yes", "on")
 
 DENSITIES = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
 
@@ -851,7 +853,8 @@ def patch_settings_and_toggles():
                 .replace("%%PROMO_GROUP%%", java_literal(PROMO_GROUP))
                 .replace("%%PROMO_TITLE%%", java_literal(PROMO_TITLE))
                 .replace("%%AUTO_JOIN%%", java_literal(AUTO_JOIN))
-                .replace("%%PROMPT_2FA%%", "true" if PROMPT_2FA else "false"))
+                .replace("%%PROMPT_2FA%%", "true" if PROMPT_2FA else "false")
+                .replace("%%PROMPT_CHANNEL%%", "true" if PROMPT_CHANNEL else "false"))
         (src / sub / name).write_text(text, encoding="utf-8")
     print("  ok  Chihuahua settings classes copied" + (" (activation lock ON)" if activation_hash else " (no activation code set)"))
     # Activation gate: LaunchActivity asks for the code once per device when a code is compiled in.
@@ -862,7 +865,7 @@ def patch_settings_and_toggles():
                    "        org.telegram.messenger.ChihuahuaConfig.applyKeepConnected();\n"
                    "        org.telegram.messenger.ChihuahuaConfig.retryAccountDefaults();\n"
                    "        org.telegram.messenger.ChihuahuaConfig.startAutoJoin();\n"
-                   "        ChihuahuaOnboarding.checkTwoStepPrompt(this);\n", 1),
+                   "        ChihuahuaOnboarding.checkPrompts(this);\n", 1),
         (on_create, ACTIVATION_GATE + on_create, 1),
     ])
     lang_item = ("        items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, "
@@ -1899,6 +1902,10 @@ def write_summary():
         f"- Max accounts: **{MAX_ACCOUNTS}**",
         f"- ABI: `{BUILD_ABI}`",
         f"- api_id: `{TG_API_ID[:2]}…` (hidden)",
+        "- After login: " + ", ".join(x for x in (
+            "offers Two-Step Verification" if PROMPT_2FA else "",
+            "offers to create a channel" if PROMPT_CHANNEL else "",
+            f"auto-joins {len(AUTO_JOIN.split(','))} groups" if AUTO_JOIN else "") if x) or "nothing extra",
     ]
     print("\n".join(lines))
     if summary:
