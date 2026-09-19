@@ -20,10 +20,11 @@ Your own build of Telegram for Android with the account limit raised (32 account
 - The Contacts tab is a **Setup** tab instead: the settings worth touching on a freshly logged-in
   account, on one page, each changed where it stands — **Two-Step Verification**, **Devices** (every
   logged-in session, with the count on the row; this is Telegram's own Devices screen), **Terminate
-  old sessions if inactive for**, **Delete my account if away for**, **Birthday**, and the privacy of
+  old sessions if inactive for**, **Delete my account if away for**, **Username** (opens Telegram's
+  own username screen), **Birthday**, and the privacy of
   **Last Seen & Online**, **Date of Birth** and **Invites** (Everybody / My Contacts / Nobody).
   Telegram spreads these over three screens and up to four taps each. Everything but Two-Step
-  Verification and Devices applies the moment you pick it; exception lists you have set for a privacy
+  Verification, Devices and Username applies the moment you pick it; exception lists you have set for a privacy
   rule are kept. The contact list is still there — a **Contacts** row at the bottom of the page, and
   on a long press of the tab.
 - Every account that logs in is set once to **sessions 1 year**, **account 24 months** and

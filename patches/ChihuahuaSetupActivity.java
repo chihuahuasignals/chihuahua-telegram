@@ -15,6 +15,7 @@ import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
+import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLObject;
@@ -53,6 +54,7 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
     private static final int ID_CONTACTS = 8;
     private static final int ID_PROMO_GROUP = 9;
     private static final int ID_DEVICES = 10;
+    private static final int ID_USERNAME = 11;
 
     /** A group promoted at the top of this page; set from config.env. Empty = no row. */
     private static final String PROMO_GROUP = "%%PROMO_GROUP%%";
@@ -97,6 +99,7 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
         getNotificationCenter().addObserver(this, NotificationCenter.privacyRulesUpdated);
         getNotificationCenter().addObserver(this, NotificationCenter.userInfoDidLoad);
         getNotificationCenter().addObserver(this, NotificationCenter.twoStepPasswordChanged);
+        getNotificationCenter().addObserver(this, NotificationCenter.mainUserInfoChanged);
 
         getContactsController().loadPrivacySettings();
         loadUserInfo();
@@ -124,6 +127,7 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
         getNotificationCenter().removeObserver(this, NotificationCenter.privacyRulesUpdated);
         getNotificationCenter().removeObserver(this, NotificationCenter.userInfoDidLoad);
         getNotificationCenter().removeObserver(this, NotificationCenter.twoStepPasswordChanged);
+        getNotificationCenter().removeObserver(this, NotificationCenter.mainUserInfoChanged);
         super.onFragmentDestroy();
     }
 
@@ -228,6 +232,9 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
 
         items.add(UItem.asHeader("Your info"));
         items.add(SettingsActivity.SettingCell.Factory.of(
+            ID_USERNAME, IconBackgroundColors.BLUE_ALT.top, IconBackgroundColors.BLUE_ALT.bottom, R.drawable.filled_username,
+            LocaleController.getString(R.string.Username), null, usernameValue()));
+        items.add(SettingsActivity.SettingCell.Factory.of(
             ID_BIRTHDAY, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.filled_birthday,
             LocaleController.getString(R.string.ContactBirthday), null,
             birthday == null ? LocaleController.getString(R.string.AddBirthday) : UserInfoActivity.birthdayString(birthday)));
@@ -262,6 +269,9 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
         } else if (item.id == ID_DEVICES) {
             devices.resetFragment();
             presentFragment(devices);
+        } else if (item.id == ID_USERNAME) {
+            // Telegram's own screen: availability check, purchased usernames and all.
+            presentFragment(new ChangeUsernameActivity());
         } else if (item.id == ID_PRIVACY_LASTSEEN) {
             openPrivacy(ContactsController.PRIVACY_RULES_TYPE_LASTSEEN, LocaleController.getString(R.string.PrivacyLastSeen));
         } else if (item.id == ID_PRIVACY_BIRTHDAY) {
@@ -432,6 +442,13 @@ public class ChihuahuaSetupActivity extends BaseFragment implements Notification
                 update();
             }
         }));
+    }
+
+    /** "@name", or the same "Set Username" wording Telegram uses when there is none. */
+    private String usernameValue() {
+        final TLRPC.User user = getUserConfig().getCurrentUser();
+        final String username = user == null ? null : UserObject.getPublicUsername(user);
+        return TextUtils.isEmpty(username) ? LocaleController.getString(R.string.ProfileUsernameSet) : "@" + username;
     }
 
     /** How many sessions (this one included), blank until the first answer is in. */
