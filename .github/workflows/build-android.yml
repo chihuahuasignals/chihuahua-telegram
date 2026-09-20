@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 355
 
-    # Six apps out of the same source: different application id, so Android installs them
+    # Seven apps out of the same source: different application id, so Android installs them
     # side by side. Every APP<n>_ setting in config.env overrides the plain one for that app,
     # which is how they differ at all. All jobs publish into one release.
     strategy:
@@ -52,6 +52,9 @@ jobs:
           - id: five
             prefix: APP5_
             status_branch: build-status-5
+          - id: six
+            prefix: APP6_
+            status_branch: build-status-6
           - id: nine
             prefix: APP9_
             status_branch: build-status-9
@@ -208,7 +211,7 @@ jobs:
             if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then break; fi
             if gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
                  --title "Chihuahua ${{ steps.collect.outputs.version }} (build ${{ github.run_number }})" \
-                 --notes "Six apps from the same code, install any or all side by side: Chihuahua1-*.apk, Chihuahua2-*.apk, Chihuahua3-*.apk, Chihuahua4-*.apk, Chihuahua5-*.apk and Chihuahua9-*.apk. Telegram ${{ steps.collect.outputs.version }} source, commit ${TELEGRAM_COMMIT:0:10}. Max accounts: ${MAX_ACCOUNTS} each. ABI: ${BUILD_ABI}. Open this page on your phone and tap an .apk to install."; then break; fi
+                 --notes "Seven apps from the same code, install any or all side by side: Chihuahua1-*.apk, Chihuahua2-*.apk, Chihuahua3-*.apk, Chihuahua4-*.apk, Chihuahua5-*.apk, Chihuahua6-*.apk and Chihuahua9-*.apk. Telegram ${{ steps.collect.outputs.version }} source, commit ${TELEGRAM_COMMIT:0:10}. Max accounts: ${MAX_ACCOUNTS} each. ABI: ${BUILD_ABI}. Open this page on your phone and tap an .apk to install."; then break; fi
             sleep 5
           done
           gh release upload "$TAG" "${{ steps.collect.outputs.apk }}" "${{ steps.collect.outputs.sums }}" \

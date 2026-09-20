@@ -59,14 +59,14 @@ Your own build of Telegram for Android with the account limit raised (32 account
 Nothing else in Telegram is changed. Built on GitHub's servers from the official
 [DrKLO/Telegram](https://github.com/DrKLO/Telegram) source (GPL v2).
 
-## Six apps
+## Seven apps
 
-Every build produces **six** APKs from the same code: `Chihuahua1-….apk` … `Chihuahua5-….apk` and
+Every build produces **seven** APKs from the same code: `Chihuahua1-….apk` … `Chihuahua6-….apk` and
 `Chihuahua9-….apk`. The application id differs (`com.chihuahua.messenger`, `…2`, `…3`, `…4`, `…5`,
-`…9`), so Android treats them as separate apps and installs them side by side: 32 accounts each,
-their own notifications, their own settings. Install any or all; they update independently from
-the same release. Each has its own animal on the icon — four dogs, a cat, and both dogs together
-on Chihuahua 9.
+`…6`, `…9`), so Android treats them as separate apps and installs them side by side: 32 accounts
+each, their own notifications, their own settings. Install any or all; they update independently
+from the same release. Each has its own animal on the icon — four dogs, a cat, and both dogs
+together on Chihuahua 9 (Chihuahua 6 shares the cat for now).
 
 `config.env` gives every app after the first a block of `APP<n>_` settings, and any of them
 overrides the plain setting for that app alone; anything the block does not mention stays the same
@@ -75,8 +75,9 @@ The per-app switches are `PROMPT_2FA` (offer Two-Step Verification after a login
 (offer to create a channel after a login — "Create" opens Telegram's own New Channel screen; asked
 once per account) and `AUTO_JOIN` (the groups a new login joins, muted).
 
-**Chihuahua 3**, **Chihuahua 4** and **Chihuahua 5** (the same app under further names and icons,
-so more phone-fulls of accounts can run it) use it for two things the others do not do:
+**Chihuahua 3**, **Chihuahua 4**, **Chihuahua 5** and **Chihuahua 6** (the same app under further
+names and icons, so more phone-fulls of accounts can run it) use it for two things the others do
+not do:
 
 - After a login it offers to set up **Two-Step Verification** (once per account — answer either way
   and it does not come back, and it never asks for an account that already has a password).
@@ -85,7 +86,7 @@ so more phone-fulls of accounts can run it) use it for two things the others do 
   nothing is tried twice and a restart carries on where it stopped. A Telegram rate limit parks that
   account until the app is started again rather than being retried into a harder limit.
   **Settings → Chihuahua → New accounts** shows how many are left and taps to resume. Clear
-  `APP3_AUTO_JOIN` (or `APP4_`/`APP5_`/`APP9_`) and that app joins nothing.
+  `APP3_AUTO_JOIN` (or `APP4_`/`APP5_`/`APP6_`/`APP9_`) and that app joins nothing.
 
 **Chihuahua 9** is Chihuahua 3 without the Two-Step Verification offer: after a login it offers to
 **create a channel** instead, and it auto-joins its own, shorter list (`APP9_AUTO_JOIN`).
