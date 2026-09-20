@@ -124,28 +124,36 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
                 activated++;
             }
         }
-        if (activated > 1) {
+        if (!ChihuahuaConfig.NOTIFICATIONS) {
             items.add(UItem.asHeader("Notifications"));
+            items.add(UItem.asShadow("Off in this app, for every account: no alerts, no sounds, no badge, and Android is never asked for the notification permission. Messages still arrive; you see them when you open the app."));
+        }
+        if (activated > 1) {
+            items.add(UItem.asHeader(ChihuahuaConfig.NOTIFICATIONS ? "Notifications" : "Background connection"));
             items.add(UItem.asCheck(ID_KEEP_CONNECTED, "Keep every account connected").setChecked(ChihuahuaConfig.keepConnected()));
             items.add(UItem.asButton(ID_NOTIF_STATUS, "Re-apply and refresh"));
             if (!chihuahuaBatteryUnrestricted()) {
                 items.add(UItem.asButton(ID_BATTERY, "Stop Android sleeping the app"));
             }
-            items.add(UItem.asShadow(ChihuahuaConfig.notificationStatus() + "\n\nThis build cannot use Google push (that needs a Firebase project of Telegram's), so notifications come from Telegram's own background connection. Telegram only applies its Keep-Alive switch to the first account and its Background Connection switch to one account at a time \u2014 this turns both on for every account, every start. Android also has to be told not to sleep the app: hold the icon \u2192 App info \u2192 Battery \u2192 no restrictions, and on Xiaomi/Redmi also turn on Autostart."));
-            for (int a : ChihuahuaConfig.accountsInOrder()) {
-                UserConfig config = UserConfig.getInstance(a);
-                TLRPC.User user = config.getCurrentUser();
-                String name = user == null ? ("Account " + (a + 1)) : UserObject.getUserName(user);
-                String subtext = ChihuahuaConfig.notificationsEnabled(a) ? "On" : "Off";
-                String username = user == null ? null : UserObject.getPublicUsername(user);
-                if (username != null && !username.isEmpty()) {
-                    subtext = subtext + " \u00b7 @" + username;
-                } else if (user != null && user.phone != null && !user.phone.isEmpty()) {
-                    subtext = subtext + " \u00b7 " + ChihuahuaConfig.phoneWithFlag(user);
+            if (!ChihuahuaConfig.NOTIFICATIONS) {
+                items.add(UItem.asShadow(ChihuahuaConfig.notificationStatus() + "\n\nKeeps Telegram's own connection open for every account while the app is in the background, so new logins finish joining their groups and chats are already up to date when you open the app. Android also has to be told not to sleep the app: hold the icon \u2192 App info \u2192 Battery \u2192 no restrictions, and on Xiaomi/Redmi also turn on Autostart."));
+            } else {
+                items.add(UItem.asShadow(ChihuahuaConfig.notificationStatus() + "\n\nThis build cannot use Google push (that needs a Firebase project of Telegram's), so notifications come from Telegram's own background connection. Telegram only applies its Keep-Alive switch to the first account and its Background Connection switch to one account at a time \u2014 this turns both on for every account, every start. Android also has to be told not to sleep the app: hold the icon \u2192 App info \u2192 Battery \u2192 no restrictions, and on Xiaomi/Redmi also turn on Autostart."));
+                for (int a : ChihuahuaConfig.accountsInOrder()) {
+                    UserConfig config = UserConfig.getInstance(a);
+                    TLRPC.User user = config.getCurrentUser();
+                    String name = user == null ? ("Account " + (a + 1)) : UserObject.getUserName(user);
+                    String subtext = ChihuahuaConfig.notificationsEnabled(a) ? "On" : "Off";
+                    String username = user == null ? null : UserObject.getPublicUsername(user);
+                    if (username != null && !username.isEmpty()) {
+                        subtext = subtext + " \u00b7 @" + username;
+                    } else if (user != null && user.phone != null && !user.phone.isEmpty()) {
+                        subtext = subtext + " \u00b7 " + ChihuahuaConfig.phoneWithFlag(user);
+                    }
+                    items.add(UItem.asButtonCheck(ID_NOTIFY_BASE + a, name, subtext).setChecked(ChihuahuaConfig.notificationsEnabled(a)));
                 }
-                items.add(UItem.asButtonCheck(ID_NOTIFY_BASE + a, name, subtext).setChecked(ChihuahuaConfig.notificationsEnabled(a)));
+                items.add(UItem.asShadow("Only the first account you log in starts switched on; every account added after it starts off. Switch an account off and it posts no notifications, makes no sound and is left out of the badge count \u2014 the other accounts keep notifying. Messages still arrive; you just see them when you open that account."));
             }
-            items.add(UItem.asShadow("Only the first account you log in starts switched on; every account added after it starts off. Switch an account off and it posts no notifications, makes no sound and is left out of the badge count \u2014 the other accounts keep notifying. Messages still arrive; you just see them when you open that account."));
         }
 
         items.add(UItem.asHeader("Chat list"));

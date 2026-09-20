@@ -79,7 +79,7 @@ jobs:
           # override to config.env is all it takes to make one app differ.
           PREFIX='${{ matrix.app.prefix }}'
           if [ -n "$PREFIX" ]; then
-            for KEY in NAME PACKAGE ICONS PROMPT_2FA PROMPT_CHANNEL AUTO_JOIN; do
+            for KEY in NAME PACKAGE ICONS PROMPT_2FA PROMPT_CHANNEL AUTO_JOIN NOTIFICATIONS; do
               LINE=$(grep -m1 "^${PREFIX}${KEY}=" config.env || true)
               [ -z "$LINE" ] && continue
               case "$KEY" in

@@ -668,6 +668,13 @@ public class ChihuahuaConfig {
     public static final boolean PROMPT_2FA = %%PROMPT_2FA%%;
     /** Whether to offer to create a channel after a login. */
     public static final boolean PROMPT_CHANNEL = %%PROMPT_CHANNEL%%;
+    /**
+     * Whether this app notifies at all. False builds an app that never posts a notification,
+     * plays no sound and shows no badge, for any account, and never asks Android for the
+     * notification permission (the manifest does not even request it, so Android 13+ blocks
+     * every notification the app could post, foreground-service and download ones included).
+     */
+    public static final boolean NOTIFICATIONS = %%NOTIFICATIONS%%;
 
     private static final long JOIN_GAP_MS = 6000;
     private static final long JOIN_ERROR_GAP_MS = 20000;
@@ -935,8 +942,14 @@ public class ChihuahuaConfig {
         return true;
     }
 
-    /** False when this account's notifications are off (switched off, or added after the first account). */
+    /**
+     * False when this account's notifications are off (switched off, or added after the first
+     * account), and always false in a build with NOTIFICATIONS off.
+     */
     public static boolean notificationsEnabled(int account) {
+        if (!NOTIFICATIONS) {
+            return false;
+        }
         if (ApplicationLoader.applicationContext == null) {
             return true;
         }

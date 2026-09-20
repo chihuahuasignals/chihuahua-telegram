@@ -64,8 +64,7 @@ Nothing else in Telegram is changed. Built on GitHub's servers from the official
 Every build produces **seven** APKs from the same code: `Chihuahua1-….apk` … `Chihuahua6-….apk` and
 `Chihuahua9-….apk`. The application id differs (`com.chihuahua.messenger`, `…2`, `…3`, `…4`, `…5`,
 `…6`, `…9`), so Android treats them as separate apps and installs them side by side: 32 accounts
-each, their own notifications, their own settings. Install any or all; they update independently
-from the same release. Each has its own animal on the icon — four dogs, a cat, and both dogs
+each, their own settings. Install any or all; they update independently from the same release. Each has its own animal on the icon — four dogs, a cat, and both dogs
 together on Chihuahua 9 (Chihuahua 6 shares the cat for now).
 
 `config.env` gives every app after the first a block of `APP<n>_` settings, and any of them
@@ -73,7 +72,17 @@ overrides the plain setting for that app alone; anything the block does not ment
 as app one. That is the whole mechanism, so a new app is a block of a few lines plus an icon folder.
 The per-app switches are `PROMPT_2FA` (offer Two-Step Verification after a login), `PROMPT_CHANNEL`
 (offer to create a channel after a login — "Create" opens Telegram's own New Channel screen; asked
-once per account) and `AUTO_JOIN` (the groups a new login joins, muted).
+once per account), `AUTO_JOIN` (the groups a new login joins, muted) and `NOTIFICATIONS`.
+
+**Only Chihuahua 1 notifies.** Every other app is built with `APP<n>_NOTIFICATIONS=false`, which
+means no notification, sound or badge for any account, ever: the app's own notification code is
+switched off for every account, Telegram's "enable notifications" prompt never appears, and the
+app does not even request Android's notification permission, so from Android 13 the system itself
+drops anything else it could post (download progress, the keep-alive service's ongoing notice,
+incoming-call alerts). Messages still arrive over the background connection and wait to be read.
+Settings → Chihuahua says so in those apps, and its Notifications section becomes a Background
+connection section. To make another app notify, set its `APP<n>_NOTIFICATIONS=true` (the plain
+`NOTIFICATIONS=true` is what Chihuahua 1 uses).
 
 **Chihuahua 3**, **Chihuahua 4**, **Chihuahua 5** and **Chihuahua 6** (the same app under further
 names and icons, so more phone-fulls of accounts can run it) use it for two things the others do
@@ -148,7 +157,7 @@ You can also press **Actions → Build Android APK → Run workflow** to rebuild
 
 ## After installing
 
-- **Notifications.** This app cannot use Google push (Telegram's push servers only deliver to tokens
+- **Notifications (Chihuahua 1; the other apps never notify, see above).** This app cannot use Google push (Telegram's push servers only deliver to tokens
   from Telegram's own Firebase project), so notifications come from Telegram's background connection.
   Settings → Chihuahua → Notifications → **Keep every account connected** turns on the keep-alive
   service and the background connection for every logged-in account on each start, which Telegram's

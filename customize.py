@@ -54,6 +54,8 @@ AUTO_JOIN = ",".join(n.strip().lstrip("@") for n in os.environ.get("AUTO_JOIN", 
 PROMPT_2FA = os.environ.get("PROMPT_2FA", "").strip().lower() in ("1", "true", "yes", "on")
 # Whether to offer to create a channel after a login.
 PROMPT_CHANNEL = os.environ.get("PROMPT_CHANNEL", "").strip().lower() in ("1", "true", "yes", "on")
+# Whether the app notifies at all (unset = yes). Off builds an app that never posts a notification.
+NOTIFICATIONS = os.environ.get("NOTIFICATIONS", "true").strip().lower() in ("1", "true", "yes", "on")
 
 DENSITIES = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
 
@@ -854,7 +856,8 @@ def patch_settings_and_toggles():
                 .replace("%%PROMO_TITLE%%", java_literal(PROMO_TITLE))
                 .replace("%%AUTO_JOIN%%", java_literal(AUTO_JOIN))
                 .replace("%%PROMPT_2FA%%", "true" if PROMPT_2FA else "false")
-                .replace("%%PROMPT_CHANNEL%%", "true" if PROMPT_CHANNEL else "false"))
+                .replace("%%PROMPT_CHANNEL%%", "true" if PROMPT_CHANNEL else "false")
+                .replace("%%NOTIFICATIONS%%", "true" if NOTIFICATIONS else "false"))
         (src / sub / name).write_text(text, encoding="utf-8")
     print("  ok  Chihuahua settings classes copied" + (" (activation lock ON)" if activation_hash else " (no activation code set)"))
     # Activation gate: LaunchActivity asks for the code once per device when a code is compiled in.
@@ -1035,6 +1038,7 @@ def patch_theme98():
     patch_quick_ban()
     patch_foreground_connection()
     patch_forward_flow()
+    patch_notifications_switch()
 
 
 def patch_forward_flow():
@@ -1116,6 +1120,31 @@ def patch_per_account_notifications():
         ("    private void playInChatSound() {\n        if (!inChatSoundEnabled || MediaController.getInstance().isRecordingAudio()) {\n",
          "    private void playInChatSound() {\n        if (!inChatSoundEnabled || !ChihuahuaConfig.notificationsEnabled(currentAccount) || MediaController.getInstance().isRecordingAudio()) {\n", 1),
     ])
+
+
+def patch_notifications_switch():
+    """NOTIFICATIONS=false builds an app that never notifies. Two layers: (1) in the app,
+    ChihuahuaConfig.notificationsEnabled() is false for every account, which the funnel, badge and
+    in-chat sound above already honour, and Telegram's "enable notifications" prompt never
+    appears; (2) in the manifest, the app stops requesting POST_NOTIFICATIONS at all, so from
+    Android 13 the system itself drops anything the app could still post - the ongoing
+    foreground-service notification, download and upload progress, incoming-call alerts. The
+    background connection is untouched; messages arrive and wait to be read."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/NotificationPermissionDialog.java", [
+        ("    public static boolean shouldAsk(Activity activity) {\n"
+         "        if (activity == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M || activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {\n",
+         "    public static boolean shouldAsk(Activity activity) {\n"
+         "        if (!org.telegram.messenger.ChihuahuaConfig.NOTIFICATIONS || activity == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M || activity.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {\n", 1),
+    ])
+    if NOTIFICATIONS:
+        print("  ok  notifications: on")
+        return
+    # tools:node="remove" also strips the permission should a library manifest declare it.
+    edit("TMessagesProj/src/main/AndroidManifest.xml", [
+        ('    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n',
+         '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" tools:node="remove"/>\n', 1),
+    ])
+    print("  ok  notifications: OFF (permission not requested, nothing ever posted)")
 
 
 def patch_profile_header():
@@ -1906,6 +1935,7 @@ def write_summary():
             "offers Two-Step Verification" if PROMPT_2FA else "",
             "offers to create a channel" if PROMPT_CHANNEL else "",
             f"auto-joins {len(AUTO_JOIN.split(','))} groups" if AUTO_JOIN else "") if x) or "nothing extra",
+        "- Notifications: " + ("on" if NOTIFICATIONS else "**OFF** (never posts any, permission not requested)"),
     ]
     print("\n".join(lines))
     if summary:

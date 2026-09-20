@@ -53,7 +53,7 @@ public class NotificationsService extends Service {
                     new NotificationCompat.Builder(this, NotificationsController.OTHER_NOTIFICATIONS_CHANNEL)
                             .setSmallIcon(R.drawable.notification)
                             .setContentTitle(LocaleController.getString(R.string.AppName))
-                            .setContentText("Connected — notifications are working")
+                            .setContentText(ChihuahuaConfig.NOTIFICATIONS ? "Connected — notifications are working" : "Connected in the background")
                             .setContentIntent(contentIntent)
                             .setOngoing(true)
                             .setShowWhen(false)
