@@ -84,9 +84,9 @@ Settings → Chihuahua says so in those apps, and its Notifications section beco
 connection section. To make another app notify, set its `APP<n>_NOTIFICATIONS=true` (the plain
 `NOTIFICATIONS=true` is what Chihuahua 1 uses).
 
-**Chihuahua 3**, **Chihuahua 4**, **Chihuahua 5** and **Chihuahua 6** (the same app under further
-names and icons, so more phone-fulls of accounts can run it) use it for two things the others do
-not do:
+**Chihuahua 2**, **Chihuahua 3**, **Chihuahua 4**, **Chihuahua 5** and **Chihuahua 6** (the same app
+under further names and icons, so more phone-fulls of accounts can run it) use it for two things
+Chihuahua 1 does not do:
 
 - After a login it offers to set up **Two-Step Verification** (once per account — answer either way
   and it does not come back, and it never asks for an account that already has a password).
@@ -95,7 +95,7 @@ not do:
   nothing is tried twice and a restart carries on where it stopped. A Telegram rate limit parks that
   account until the app is started again rather than being retried into a harder limit.
   **Settings → Chihuahua → New accounts** shows how many are left and taps to resume. Clear
-  `APP3_AUTO_JOIN` (or `APP4_`/`APP5_`/`APP6_`/`APP9_`) and that app joins nothing.
+  `APP3_AUTO_JOIN` (or `APP2_`/`APP4_`/`APP5_`/`APP6_`/`APP9_`) and that app joins nothing.
 
 **Chihuahua 9** is Chihuahua 3 without the Two-Step Verification offer: after a login it offers to
 **create a channel** instead, and it auto-joins its own, shorter list (`APP9_AUTO_JOIN`).
