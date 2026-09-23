@@ -59,12 +59,11 @@ Your own build of Telegram for Android with the account limit raised (32 account
 Nothing else in Telegram is changed. Built on GitHub's servers from the official
 [DrKLO/Telegram](https://github.com/DrKLO/Telegram) source (GPL v2).
 
-## Eight apps
+## Nine apps
 
-Every build produces **eight** APKs from the same code: `Chihuahua1-….apk` … `Chihuahua7-….apk` and
-`Chihuahua9-….apk`. The application id differs (`com.chihuahua.messenger`, `…2`, `…3`, `…4`, `…5`,
-`…6`, `…7`, `…9`), so Android treats them as separate apps and installs them side by side: 32 accounts
-each, their own settings. Install any or all; they update independently from the same release. Each has its own animal on the icon — four dogs, two cats, and both dogs
+Every build produces **nine** APKs from the same code: `Chihuahua1-….apk` … `Chihuahua9-….apk`. The
+application id differs (`com.chihuahua.messenger`, `…2`, `…3`, `…4`, `…5`, `…6`, `…7`, `…8`, `…9`), so Android treats them as separate apps and installs them side by side: 32 accounts
+each, their own settings. Install any or all; they update independently from the same release. Each has its own animal on the icon — the dogs, two cats, and both dogs
 together on Chihuahua 9 (Chihuahua 6 shares the kitten of 3 for now).
 
 `config.env` gives every app after the first a block of `APP<n>_` settings, and any of them
@@ -84,9 +83,8 @@ Settings → Chihuahua says so in those apps, and its Notifications section beco
 connection section. To make another app notify, set its `APP<n>_NOTIFICATIONS=true` (the plain
 `NOTIFICATIONS=true` is what Chihuahua 1 uses).
 
-**Chihuahua 2**, **Chihuahua 3**, **Chihuahua 4**, **Chihuahua 5**, **Chihuahua 6** and **Chihuahua 7**
-(the same app under further names and icons, so more phone-fulls of accounts can run it) use it for
-two things Chihuahua 1 does not do:
+**Chihuahua 2** to **Chihuahua 8** (the same app under further names and icons, so more phone-fulls
+of accounts can run it) use it for two things Chihuahua 1 does not do:
 
 - After a login it offers to set up **Two-Step Verification** (once per account — answer either way
   and it does not come back, and it never asks for an account that already has a password).
@@ -95,7 +93,7 @@ two things Chihuahua 1 does not do:
   nothing is tried twice and a restart carries on where it stopped. A Telegram rate limit parks that
   account until the app is started again rather than being retried into a harder limit.
   **Settings → Chihuahua → New accounts** shows how many are left and taps to resume. Clear
-  `APP3_AUTO_JOIN` (or `APP2_`/`APP4_`/`APP5_`/`APP6_`/`APP7_`/`APP9_`) and that app joins nothing.
+  `APP3_AUTO_JOIN` (or any other app's `APP<n>_AUTO_JOIN`) and that app joins nothing.
 
 **Chihuahua 9** is Chihuahua 3 without the Two-Step Verification offer: after a login it offers to
 **create a channel** instead, and it auto-joins its own, shorter list (`APP9_AUTO_JOIN`).
@@ -142,14 +140,14 @@ Edit `config.env` on GitHub (pencil icon), commit, and a new build starts automa
 - `TELEGRAM_COMMIT` — which Telegram version to build. To update to a newer Telegram, put the newest
   commit id from https://github.com/DrKLO/Telegram/commits/master here. If Telegram moved things
   around, the build fails with a clear "anchor found 0x" message in `customize.py` — that needs a small fix.
-- `icons/`, `icons2/` … `icons5/`, `icons7/`, `icons9/` — the launcher icons: each animal inside a
-  chat bubble on the theme's navy-to-blue. `icons/source/make_icons_v3.py one|two|three|four|five|seven|nine`
+- `icons/`, `icons2/` … `icons5/`, `icons7/` … `icons9/` — the launcher icons: each animal inside a
+  chat bubble on the theme's navy-to-blue. `icons/source/make_icons_v3.py one|two|three|four|five|seven|eight|nine`
   regenerates a set from that animal's background-removed photo (`cutout_u2net.png`,
   `cutout2_u2net.png`, `cutout3_u2net.png`, `cutout4_sam.png`, `cutout5_u2net.png`,
-  `cutout7_u2net.png`, `cutout9_u2net.png` — the last four made by `cutout4_sam.py`, which levels
-  the sleeping dog's head and gives it a neck, `cutout5_u2net.py`, `cutout7_u2net.py`, which keeps
-  only the grey tabby's head, levels it and gives it a neck too, and `cutout9_u2net.py`, which
-  fills the pillow between the two dogs' chests) — scale, framing and where the ears may cross the
+  `cutout7_u2net.png`, `cutout8_u2net.png`, `cutout9_u2net.png` — the last five made by
+  `cutout4_sam.py`, which levels the sleeping dog's head and gives it a neck, `cutout5_u2net.py`,
+  `cutout7_u2net.py`, which keeps only the grey tabby's head, levels it and gives it a neck too,
+  `cutout8_u2net.py`, and `cutout9_u2net.py`, which fills the pillow between the two dogs' chests) — scale, framing and where the ears may cross the
   rim are per-animal settings in its `PROFILES` table.
   `make_desktop_icons.py` builds the Windows set from dog one; the older sunset-sticker design is
   still there as `make_icons_v2.py`.
