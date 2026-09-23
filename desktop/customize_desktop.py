@@ -479,6 +479,23 @@ ACCOUNT_ID_ROWS = """\t\t{
 """
 
 
+# The same row in group and channel profiles, above the description, in the
+# form bots and the API use so it matches the phone: -100<id> for channels
+# and supergroups, -<id> for basic groups.
+CHAT_ID_ROW = """\t\t{
+\t\t\tconst auto chihuahuaChatId = _peer->isChannel()
+\t\t\t\t? (u"-100"_q + QString::number(peerToChannel(_peer->id).bare))
+\t\t\t\t: (u"-"_q + QString::number(peerToChat(_peer->id).bare));
+\t\t\taddInfoOneLine(
+\t\t\t\tu"ID"_q,
+\t\t\t\trpl::single(TextWithEntities{ chihuahuaChatId }),
+\t\t\t\tu"Copy ID"_q,
+\t\t\t\tst::infoProfileLabeledPadding,
+\t\t\t\tst::popupMenuWithIcons);
+\t\t}
+"""
+
+
 MESSAGE_VIEW = "Telegram/SourceFiles/history/view/history_view_message.cpp"
 
 # The sender's name is built in exactly one place and everything downstream
@@ -784,6 +801,9 @@ def patch_account_id():
         ('\t\tauto label = user->isBot()\n\t\t\t? tr::lng_info_about_label()\n\t\t\t: tr::lng_info_bio_label();\n',
          ACCOUNT_ID_ROWS
          + '\t\tauto label = user->isBot()\n\t\t\t? tr::lng_info_about_label()\n\t\t\t: tr::lng_info_bio_label();\n', 1),
+        ('\t\tconst auto about = addInfoLine(tr::lng_info_about_label(), _topic\n',
+         CHAT_ID_ROW
+         + '\t\tconst auto about = addInfoLine(tr::lng_info_about_label(), _topic\n', 1),
     ])
     patch_age_badge()
     patch_scroll_preload()

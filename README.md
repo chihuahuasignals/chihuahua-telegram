@@ -196,7 +196,8 @@ report them for spam, then delete every message and reaction of theirs; Wipe run
 Mute ask first. The account rows in the ☰ menu and in Settings show each account's calling code
 after the name (Quah Kee · +65). It also shows two extra rows in a
 user's profile: **ID** (right-click → Copy ID) and **Account created** (the month estimated from
-that ID). Both apps read the same anchor table out of `patches/ChihuahuaConfig.java`, so their
+that ID), and group and channel profiles get the same **ID** row above the description, in the
+`-100…` / `-…` form the phone shows. Both apps read the same anchor table out of `patches/ChihuahuaConfig.java`, so their
 estimates cannot drift apart (`customize_desktop.py` generates `Telegram/SourceFiles/chihuahua_age.h`
 from it). In group chats a sender under three months old gets ` · new` or ` · 2mo` after their name —
 plain, not red, and shown only for new accounts, so the badge appearing at all is the warning.
