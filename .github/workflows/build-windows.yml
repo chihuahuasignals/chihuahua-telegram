@@ -301,14 +301,29 @@ jobs:
         run: |
           set -euo pipefail
           TAG="desktop-v${{ steps.pack.outputs.version }}-build${{ github.run_number }}"
+          ZIP="${{ steps.pack.outputs.zip }}"
           # --target pins the tag to the commit this run built. Without it, gh tags whatever the
           # default branch's HEAD is at release time, which after back-to-back pushes was a
           # different commit from the one in the zip.
-          gh release create "$TAG" "${{ steps.pack.outputs.zip }}" SHA256SUMS-desktop.txt \
+          # The release is created first, without files, then the files are uploaded with
+          # retries: given files, "gh release create" makes a draft, uploads, then publishes, and
+          # when the 70 MB upload broke (run 23) the draft was left behind with no tag and no zip,
+          # and the run failed after a two-and-a-half-hour build. A separate upload can be retried.
+          gh --version
+          gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "$APP_NAME for Windows ${{ steps.pack.outputs.version }} (build ${{ github.run_number }})" \
             --notes "Telegram Desktop ${{ steps.pack.outputs.version }} source, built from ${GITHUB_SHA:0:10}. Max accounts: ${MAX_ACCOUNTS}. Unzip and run the .exe (portable: its data lives in a tdata folder next to the .exe, so put a new .exe in the same folder as the old one). SmartScreen: More info -> Run anyway."
+          ok=0
+          for i in 1 2 3 4 5; do
+            if gh release upload "$TAG" "$ZIP" SHA256SUMS-desktop.txt --repo "$GITHUB_REPOSITORY" --clobber; then ok=1; break; fi
+            echo "upload attempt $i failed; retrying in 30 s"
+            sleep 30
+          done
+          if [ "$ok" != 1 ]; then echo "::error::could not upload $ZIP to release $TAG after 5 attempts"; exit 1; fi
+          # make sure the zip really is on the release before calling it done
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx "$ZIP"
           echo "- Release: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG" >> $GITHUB_STEP_SUMMARY
 
       - name: Dispatch the app build now that the libraries are cached.
