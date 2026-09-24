@@ -1048,7 +1048,9 @@ def patch_forward_flow():
     can be ticked and sent to in one go; Telegram had this but only behind a long press. Forum
     and community chats still open their topic list, and the reply-to / quote-to pickers are
     untouched. (3) Forwards go out without the "Forwarded from" header by default - the field
-    panel's Show Sender Name and the share sheet's long-press menu still switch it back on."""
+    panel's Show Sender Name and the share sheet's long-press menu still switch it back on.
+    (4) The picker's Send sends, to one chat as to many: Telegram opened a single chat with the
+    forward panel and waited for a second Send, which read as the forward not having happened."""
     ui = "TMessagesProj/src/main/java/org/telegram/ui/"
     edit(ui + "Components/chat/layouts/ChatActivityActionsButtonsLayout.java", [
         ("        addView(replyButton.button, LayoutHelper.createLinear(0, 56, 1f, 1, 0, -1, 0));\n"
@@ -1064,6 +1066,11 @@ def patch_forward_flow():
          "            if ((!getMessagesController().isForum(dialogId) && !getMessagesController().isCommunity(dialogId) || isBotForumWithEmptyTopics(dialogId)) && (!selectedDialogs.isEmpty() || (initialDialogsType == DIALOGS_TYPE_FORWARD && (selectAlertString != null || !isReplyTo && !isQuote)))) {\n", 1),
     ])
     edit(ui + "ChatActivity.java", [
+        # Telegram sends at once only for several chats, Saved Messages, a comment, a schedule or
+        # a silent send; one chat opens with the forward panel and waits for a second Send. Here
+        # the picker's Send is the send, one chat or many. Quote and reply-to pickers keep theirs.
+        ("        if (!fragment.isQuote && (dids.size() > 1 || dids.get(0).dialogId == getUserConfig().getClientUserId() || message != null || scheduleDate != 0 || !notify)) {\n",
+         "        if (!fragment.isQuote) { // Chihuahua: every forward leaves from the picker's Send, one chat or many\n", 1),
         ("                messagePreviewParams = null;\n"
          "                hideFieldPanel(false);\n"
          "                for (int a = 0; a < dids.size(); a++) {\n",

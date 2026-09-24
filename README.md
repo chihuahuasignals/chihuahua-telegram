@@ -49,9 +49,10 @@ Your own build of Telegram for Android with the account limit raised (32 account
 - **Forwarding in one go**: hold a message and the bar underneath has only **Forward** (no Reply). In
   "Forward to…" a tap ticks a chat instead of picking it, so tick as many as you like and press Send —
   Telegram had this, but only after a long press. Forwards go out **without the "Forwarded from"
-  header** by default, from the field panel and from the share sheet alike; the panel's Show Sender
-  Name and the share sheet's long-press menu switch it back on. Ticking a single chat and pressing
-  Send opens that chat with the forward ready, as Telegram does.
+  header** by default, from the field panel and from the share sheet alike; the share sheet's
+  long-press menu switches it back on. The picker's Send is the send: one chat or many, the
+  messages leave the moment you press it (Telegram opened a single chat with the forward panel
+  and waited for a second Send).
 - In group chats the sender's estimated account age next to their name (red when newer than your threshold), so throwaway spam accounts stand out without opening profiles.
 - A **Chihuahua 98** colour theme (Windows 98 palette: navy title bars, grey chrome, teal chat background), applied once on first start and listed under Settings → Chat Settings; the chat list is titled "Chihuahua".
 - **Settings → Chihuahua**: the Ban-wipe-report item, flag new accounts in groups (with the age threshold), notifications on/off per logged-in account (only the first account you log in starts on; every account added after it starts off), ghost mode (no read receipts, no typing indicator, stay offline), video calls start with the back camera, hide the Stories bar, hide Telegram Premium promotions, toggle the ID display.
