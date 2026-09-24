@@ -1,0 +1,8 @@
+result=success
+run=80
+run_url=https://github.com/chihuahuasignals/chihuahua-telegram/actions/runs/36040370998
+commit=a158266be26b2cfe8133aca488b4586e7c7904db
+app=eight
+apk=Chihuahua8-12.10.1-arm64-v8a.apk
+version=12.10.1
+finished=2026-09-24T18:39:05Z
