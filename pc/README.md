@@ -38,13 +38,42 @@ Opens the phone on its own, without Android Studio, like BlueStacks.
    ```
 
 4. Name it **Chihuahua PC** → **Finish**.
+5. Right-click the new icon → **Properties** → **Run:** choose **Minimized** → **OK**.
 
-Double-click it: a black log window opens, then the phone. Minimize the black window but don't
-close it — closing it switches the phone off.
+Double-click it: the phone opens, and its black log window starts minimized in the taskbar. That
+window is the phone's engine — it can't be switched off, only kept out of sight. Switch the phone
+off with the **✕** on its side toolbar: it saves its state (the next start takes seconds) and the
+black window closes with it. Closing the black window instead kills the phone without saving.
 
 If the black window flashes and closes with no phone, the emulator quit on an error — usually a
 wrong name after `-avd`. Run the shortcut's line in PowerShell to read the error (it prints
 `Unknown AVD name` for a wrong name), then fix it under right-click → **Properties** → **Target**.
+
+## Make it fast (once, before you log in to anything)
+
+Android Studio's default phone gets 2 GB of RAM and 6 GB of storage — laggy with nine Telegram
+apps, and too small for their photo caches. With the phone switched off, open its settings file
+`%USERPROFILE%\.android\avd\<folder>.avd\config.ini` in Notepad (the folder can be plain
+`Medium_Phone.avd`) and set these three lines:
+
+```
+hw.ramSize=8192
+hw.gpu.mode=host
+disk.dataPartition.size=17179869184
+```
+
+Write the RAM in plain megabytes: with Android Studio's own `hw.ramSize=2G` the emulator logged
+`Increasing RAM size to 2048MB` and ran on 2 GB, while `8192` gives 8 GB. The CPU is already at the
+emulator's maximum (6 cores) and `host` puts the graphics on the real graphics card. The bigger
+storage needs one fresh start, which **erases the virtual phone** — hence before logging in:
+
+```powershell
+& "$env:LOCALAPPDATA\Android\Sdk\emulator\emulator.exe" -avd Medium_Phone_API_35 -wipe-data
+```
+
+After that, use the desktop icon as usual. The emulator's start-up log shows what it is really
+using (`hardware-qemu.ini` in the same folder holds the same values). Don't edit this phone in
+Android Studio's Device Manager afterwards — it writes its own values back over these.
 
 ## Install or update the apps
 
@@ -71,5 +100,3 @@ never onto a phone plugged in by USB), and over the top (`-r`), so accounts stay
   Settings → Chihuahua → Devices, or Telegram's own Devices screen).
 - To Telegram's anti-spam, many accounts run from one PC look the same as many accounts run from
   one phone. The emulator doesn't change that.
-- Feels slow switching between apps? Android Studio → Device Manager → **⋮** next to the phone →
-  **Edit** → give it 4 GB of RAM.
