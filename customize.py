@@ -1052,6 +1052,7 @@ def patch_theme98():
     patch_member_mute()
     patch_media_cache()
     patch_no_number_autofill()
+    patch_no_fullscreen_prompt()
 
 
 def patch_forward_flow():
@@ -2001,6 +2002,27 @@ def patch_no_number_autofill():
          "        public void fillNumber() {\n"
          "            if (true || numberFilled || activityMode != MODE_LOGIN) { // Chihuahua: never pre-fill the SIM's number\n", 1),
     ])
+
+
+def patch_no_fullscreen_prompt():
+    """No "Please allow Telegram to be shown on the lock screen so that calls can work properly"
+    dialog. On Android 14+ the chat list asks for "Full screen alerts" (USE_FULL_SCREEN_INTENT,
+    the incoming-call screen over the lock screen) until it is granted or Not now is tapped, so
+    every app asked once. Never asked now. Apps with notifications on keep the permission in
+    their manifest (a call can still take over the lock screen if it is switched on by hand in
+    Settings); the silent apps drop it, so they are not even listed under Full screen alerts."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java", [
+        ("        } else if (folderId == 0 && communityId == 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !notificationManager.canUseFullScreenIntent()) {\n",
+         "        } else if (false && folderId == 0 && communityId == 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !notificationManager.canUseFullScreenIntent()) { // Chihuahua: never ask for full-screen alerts\n", 1),
+    ])
+    if NOTIFICATIONS:
+        print("  ok  full-screen alerts: never asked (permission kept)")
+        return
+    edit("TMessagesProj/src/main/AndroidManifest.xml", [
+        ('    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>\n',
+         '    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" tools:node="remove"/>\n', 1),
+    ])
+    print("  ok  full-screen alerts: never asked, permission removed")
 
 
 def install_icons():
