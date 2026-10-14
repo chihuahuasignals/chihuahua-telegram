@@ -13,26 +13,38 @@ Android Studio already installed. Don't switch Defender off for any of this.
 ## What you need
 
 - Android Studio, set up once with its defaults (free, from developer.android.com/studio). Its
-  setup wizard installs the emulator and `adb`, and creates a virtual phone called
-  **`Medium_Phone`** (x86_64, Google Play). If you made your own phone instead, use its name from
-  Android Studio's Device Manager, with spaces turned into underscores.
-- Virtualization switched on (if `Medium_Phone` has ever started from Android Studio, it is).
+  setup wizard installs the emulator and `adb`, and creates a virtual phone (x86_64, Google
+  Play), named e.g. `Medium_Phone_API_35`. Any x86_64 phone you made in Device Manager works too.
+- Virtualization switched on (if that phone has ever started from Android Studio, it is).
 
 ## One time: a desktop icon that opens the phone
 
 Opens the phone on its own, without Android Studio, like BlueStacks.
 
-1. Right-click an empty spot on the desktop → **New** → **Shortcut**.
-2. Paste this as the location → **Next**:
+1. Find the phone's exact name — paste this into PowerShell:
+
+   ```powershell
+   & "$env:LOCALAPPDATA\Android\Sdk\emulator\emulator.exe" -list-avds
+   ```
+
+   It prints one name per virtual phone, e.g. `Medium_Phone_API_35`. Use exactly that — not
+   the name Device Manager shows, and not the folder under `.android\avd` (that one can be just
+   `Medium_Phone.avd` while the phone is `Medium_Phone_API_35`).
+2. Right-click an empty spot on the desktop → **New** → **Shortcut**.
+3. Paste this as the location, with the name from step 1 at the end → **Next**:
 
    ```
-   %LOCALAPPDATA%\Android\Sdk\emulator\emulator.exe -avd Medium_Phone
+   %LOCALAPPDATA%\Android\Sdk\emulator\emulator.exe -avd Medium_Phone_API_35
    ```
 
-3. Name it **Chihuahua PC** → **Finish**.
+4. Name it **Chihuahua PC** → **Finish**.
 
 Double-click it: a black log window opens, then the phone. Minimize the black window but don't
 close it — closing it switches the phone off.
+
+If the black window flashes and closes with no phone, the emulator quit on an error — usually a
+wrong name after `-avd`. Run the shortcut's line in PowerShell to read the error (it prints
+`Unknown AVD name` for a wrong name), then fix it under right-click → **Properties** → **Target**.
 
 ## Install or update the apps
 
