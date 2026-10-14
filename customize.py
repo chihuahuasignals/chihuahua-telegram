@@ -1039,6 +1039,7 @@ def patch_theme98():
     patch_foreground_connection()
     patch_forward_flow()
     patch_notifications_switch()
+    patch_member_mute()
 
 
 def patch_forward_flow():
@@ -1105,6 +1106,63 @@ def patch_forward_flow():
          "            showSendersNameView.setChecked(showSendersName = true);\n",
          "            showSendersNameView.setTextAndIcon(false ? LocaleController.getString(R.string.ShowSenderNames) : LocaleController.getString(R.string.ShowSendersName), 0);\n"
          "            showSendersNameView.setChecked(showSendersName);\n", 1),
+    ])
+
+
+def patch_member_mute():
+    """Long-press a member in a group's member list: Telegram offers Send message, admin rights,
+    Change permissions and Remove from group. Here Send message is gone (tapping the member still
+    opens their profile) and Mute sits next to Remove from group: one tap and they can no longer
+    post, react or invite, for good, with no permissions screen and no confirmation; they stay in
+    the group and can read. On a member who is already muted the same item says Unmute. Supergroups
+    only, never on admins. Both member lists get it: the one in the group's profile and the full
+    Members screen under Manage group."""
+    ui = "TMessagesProj/src/main/java/org/telegram/ui/"
+    edit(ui + "ProfileActivity.java", [
+        ("            ItemOptions.makeOptions(this, view)\n"
+         "                    .setScrimViewBackground(bg)\n"
+         "                    .setLongPressSelectionEnabled(false)\n"
+         "                    .addIf(!self, R.drawable.msg_discussion, getString(R.string.SendMessage), () -> {\n"
+         "                        presentFragment(ChatActivity.of(user.id));\n"
+         "                    })\n"
+         "                    .addGapIf(!self && (canEditAdmin || canEditTag || canRestrict || allowKick))\n",
+         "            // Chihuahua: one tap mutes or unmutes - no permissions screen, no confirmation.\n"
+         "            final boolean chihuahuaCanMute = canRestrict && channelParticipant != null && !isAdmin && ChatObject.isMegagroup(currentChat);\n"
+         "            final boolean chihuahuaMuted = channelParticipant != null && org.telegram.messenger.ChihuahuaConfig.isMuted(channelParticipant.banned_rights);\n"
+         "            ItemOptions.makeOptions(this, view)\n"
+         "                    .setScrimViewBackground(bg)\n"
+         "                    .setLongPressSelectionEnabled(false)\n"
+         "                    // Chihuahua: no Send message here; tapping the member opens their profile.\n", 1),
+        ("                    .addIf(allowKick, R.drawable.msg_remove, LocaleController.getString(R.string.KickFromGroup), true, () -> {\n"
+         "                        kickUser(selectedUser, participant);\n"
+         "                    })\n",
+         "                    .addIf(chihuahuaCanMute, chihuahuaMuted ? R.drawable.msg_unmute : R.drawable.msg_mute, chihuahuaMuted ? \"Unmute\" : \"Mute\", () -> {\n"
+         "                        final TLRPC.TL_chatBannedRights chihuahuaRights = chihuahuaMuted ? new TLRPC.TL_chatBannedRights() : org.telegram.messenger.ChihuahuaConfig.muteRights();\n"
+         "                        getMessagesController().setParticipantBannedRole(chatId, user, null, chihuahuaRights, false, ProfileActivity.this, () -> {\n"
+         "                            channelParticipant.banned_rights = chihuahuaMuted ? null : chihuahuaRights;\n"
+         "                            if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {\n"
+         "                                BulletinFactory.of(ProfileActivity.this).createSimpleBulletin(chihuahuaMuted ? R.raw.ic_unmute : R.raw.ic_mute, UserObject.getUserName(user) + (chihuahuaMuted ? \" can post again\" : \" muted\")).show();\n"
+         "                            }\n"
+         "                        });\n"
+         "                    })\n"
+         "                    .addIf(allowKick, R.drawable.msg_remove, LocaleController.getString(R.string.KickFromGroup), true, () -> {\n"
+         "                        kickUser(selectedUser, participant);\n"
+         "                    })\n", 1),
+    ])
+    edit(ui + "ChatUsersActivity.java", [
+        ("                .addIf(ChatObject.canBlockUsers(currentChat) && canEditAdmin, R.drawable.msg_remove, isChannel ? getString(\"ChannelRemoveUser\", R.string.ChannelRemoveUser) : getString(\"KickFromGroup\", R.string.KickFromGroup), true, () -> {\n",
+         "                // Chihuahua: one tap mutes or unmutes - no permissions screen, no confirmation.\n"
+         "                .addIf(canChangePermission && !editingAdmin && participant instanceof TLRPC.ChannelParticipant && !(participant instanceof TLRPC.TL_channelParticipantCreator), org.telegram.messenger.ChihuahuaConfig.isMuted(bannedRights) ? R.drawable.msg_unmute : R.drawable.msg_mute, org.telegram.messenger.ChihuahuaConfig.isMuted(bannedRights) ? \"Unmute\" : \"Mute\", () -> {\n"
+         "                    final boolean chihuahuaMuted = org.telegram.messenger.ChihuahuaConfig.isMuted(bannedRights);\n"
+         "                    final TLRPC.TL_chatBannedRights chihuahuaRights = chihuahuaMuted ? new TLRPC.TL_chatBannedRights() : org.telegram.messenger.ChihuahuaConfig.muteRights();\n"
+         "                    getMessagesController().setParticipantBannedRole(chatId, user, null, chihuahuaRights, false, ChatUsersActivity.this, () -> {\n"
+         "                        updateParticipantWithRights((TLRPC.ChannelParticipant) participant, adminRights, chihuahuaMuted ? null : chihuahuaRights, 0, false);\n"
+         "                        if (BulletinFactory.canShowBulletin(ChatUsersActivity.this)) {\n"
+         "                            BulletinFactory.of(ChatUsersActivity.this).createSimpleBulletin(chihuahuaMuted ? R.raw.ic_unmute : R.raw.ic_mute, UserObject.getUserName(user) + (chihuahuaMuted ? \" can post again\" : \" muted\")).show();\n"
+         "                        }\n"
+         "                    });\n"
+         "                })\n"
+         "                .addIf(ChatObject.canBlockUsers(currentChat) && canEditAdmin, R.drawable.msg_remove, isChannel ? getString(\"ChannelRemoveUser\", R.string.ChannelRemoveUser) : getString(\"KickFromGroup\", R.string.KickFromGroup), true, () -> {\n", 1),
     ])
 
 

@@ -810,6 +810,80 @@ def patch_account_id():
     patch_online_count()
 
 
+PARTICIPANTS_BOX = "Telegram/SourceFiles/boxes/peers/edit_participants_box.cpp"
+
+# Right-click a member in a group's member list: Mute (or Unmute) next to "Remove from
+# group", applied the moment it is clicked - no restrictions box, no confirmation. The same
+# rights as the Android build's one-tap mute: they stay in the group and can read, but can
+# no longer post, react, pin, invite or edit info, for good. Supergroups only, never admins.
+MEMBER_MUTE = """\t// Chihuahua: one click mutes or unmutes - no restrictions box, no confirmation.
+\tif (user
+\t\t&& channel
+\t\t&& channel->isMegagroup()
+\t\t&& !channel->isGigagroup()
+\t\t&& _additional.canRestrictParticipant(participant)
+\t\t&& !_additional.isKicked(participant)
+\t\t&& !_additional.isCreator(user)
+\t\t&& !_additional.adminRights(user).has_value()) {
+\t\tusing Flag = ChatRestriction;
+\t\tconst auto chihuahuaOld = _additional.restrictedRights(participant).value_or(
+\t\t\tChatRestrictionsInfo());
+\t\tconst auto chihuahuaMuted = (chihuahuaOld.flags & Flag::SendOther) != 0;
+\t\tconst auto chihuahuaNew = chihuahuaMuted
+\t\t\t? ChatRestrictionsInfo()
+\t\t\t: ChatRestrictionsInfo(Flag::SendStickers
+\t\t\t\t| Flag::SendGifs
+\t\t\t\t| Flag::SendGames
+\t\t\t\t| Flag::SendInline
+\t\t\t\t| Flag::SendPolls
+\t\t\t\t| Flag::SendPhotos
+\t\t\t\t| Flag::SendVideos
+\t\t\t\t| Flag::SendVideoMessages
+\t\t\t\t| Flag::SendMusic
+\t\t\t\t| Flag::SendVoiceMessages
+\t\t\t\t| Flag::SendFiles
+\t\t\t\t| Flag::SendOther
+\t\t\t\t| Flag::EmbedLinks
+\t\t\t\t| Flag::ChangeInfo
+\t\t\t\t| Flag::AddParticipants
+\t\t\t\t| Flag::PinMessages
+\t\t\t\t| Flag::CreateTopics
+\t\t\t\t| Flag::SendReactions, TimeId(0));
+\t\tconst auto chihuahuaShow = delegate()->peerListUiShow();
+\t\tresult->addAction(
+\t\t\tchihuahuaMuted ? u"Unmute"_q : u"Mute"_q,
+\t\t\tcrl::guard(this, [=, this] {
+\t\t\t\tApi::ChatParticipants::Restrict(
+\t\t\t\t\tchannel,
+\t\t\t\t\tuser,
+\t\t\t\t\tchihuahuaOld,
+\t\t\t\t\tchihuahuaNew,
+\t\t\t\t\tcrl::guard(this, [=, this] {
+\t\t\t\t\t\teditRestrictedDone(user, chihuahuaNew);
+\t\t\t\t\t\tchihuahuaShow->showToast(user->name()
+\t\t\t\t\t\t\t+ (chihuahuaMuted
+\t\t\t\t\t\t\t\t? u" can post again"_q
+\t\t\t\t\t\t\t\t: u" muted"_q));
+\t\t\t\t\t}),
+\t\t\t\t\t[=](const QString &error) {
+\t\t\t\t\t\tchihuahuaShow->showToast(error);
+\t\t\t\t\t});
+\t\t\t}),
+\t\t\tchihuahuaMuted ? &st::menuIconUnmute : &st::menuIconMute);
+\t}
+"""
+
+
+def patch_member_mute():
+    anchor = ("\t\t\t\t&st::menuIconPermissions);\n\t\t}\n\t}\n"
+              "\tif (user && _additional.canRemoveParticipant(participant)) {\n")
+    edit(PARTICIPANTS_BOX, [
+        (anchor,
+         "\t\t\t\t&st::menuIconPermissions);\n\t\t}\n\t}\n" + MEMBER_MUTE
+         + "\tif (user && _additional.canRemoveParticipant(participant)) {\n", 1),
+    ])
+
+
 def patch_moderation():
     edit(CONTEXT_MENU, [
         # Headers the ported code needs that the file does not already pull in.
@@ -908,6 +982,8 @@ def main():
         edit(rel, [('u"Telegram"_q', f'u"{APP_NAME}"_q', 1)])
     # --- moderation actions (Ban/Mute/Wipe + report, across every group you manage)
     patch_moderation()
+    # --- one-click Mute / Unmute next to Remove from group in member lists
+    patch_member_mute()
     # --- account ID + estimated creation month in user profiles
     patch_account_id()
     # --- "Admins" in a group or channel menu, without needing admin rights

@@ -996,6 +996,43 @@ public class ChihuahuaConfig {
         }
     }
 
+    // ---- one-tap mute in member lists -------------------------------------------------------
+    // Long-press a member in a group's member list: Mute takes away everything they could post,
+    // at once and for good, without the permissions screen or a confirmation. They stay in the
+    // group and can still read. Unmute gives it all back.
+
+    /** Everything a muted member may not do: post anything, react, pin, invite, edit info. */
+    public static TLRPC.TL_chatBannedRights muteRights() {
+        final TLRPC.TL_chatBannedRights rights = new TLRPC.TL_chatBannedRights();
+        rights.view_messages = false;
+        rights.send_messages = true;
+        rights.send_media = true;
+        rights.send_stickers = true;
+        rights.send_gifs = true;
+        rights.send_games = true;
+        rights.send_inline = true;
+        rights.embed_links = true;
+        rights.send_polls = true;
+        rights.send_photos = true;
+        rights.send_videos = true;
+        rights.send_roundvideos = true;
+        rights.send_audios = true;
+        rights.send_voices = true;
+        rights.send_docs = true;
+        rights.send_plain = true;
+        rights.send_reactions = true;
+        rights.invite_users = true;
+        rights.change_info = true;
+        rights.pin_messages = true;
+        rights.until_date = 0;
+        return rights;
+    }
+
+    /** True when these restrictions already stop the member posting. */
+    public static boolean isMuted(TLRPC.TL_chatBannedRights rights) {
+        return rights != null && (rights.send_messages || rights.send_plain);
+    }
+
     // ---- account age from the user ID -------------------------------------------------------
     // Telegram hands out user IDs in increasing order, so an ID roughly dates the account.
     // Anchors: the widely used first-seen table for IDs below 2.15e9, the November 2021 jump

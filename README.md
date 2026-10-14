@@ -46,6 +46,13 @@ Your own build of Telegram for Android with the account limit raised (32 account
   group you manage, without removing them) ·
   **Wipe & report** (clean-up only: no ban, no mute).
   Wipe runs the moment you tap it. Ban and Mute ask first, naming how many groups.
+- **One-tap Mute in member lists**: long-press a member in a group's member list (in the group's
+  profile, or Manage group → Members) and **Mute** sits next to Remove from group — tapped, the
+  member can no longer post, react, pin, invite or edit info, for good, with no permissions screen
+  and no confirmation; they stay in the group and can read. On a member who is already muted the
+  same item says **Unmute**. This group only (the moderation items above cover every group);
+  supergroups only, never on admins. Telegram's Send message item is gone from that menu — tapping
+  a member still opens their profile.
 - **Forwarding in one go**: hold a message and the bar underneath has only **Forward** (no Reply). In
   "Forward to…" a tap ticks a chat instead of picking it, so tick as many as you like and press Send —
   Telegram had this, but only after a long press. Forwards go out **without the "Forwarded from"
@@ -193,7 +200,8 @@ The desktop build has the name, icon, 32-account limit and the same three modera
 message's right-click menu — **Ban, wipe & report**, **Mute, wipe & report**, **Wipe & report** —
 with the same behaviour as on the phone: in every group you manage, find the sender's messages,
 report them for spam, then delete every message and reaction of theirs; Wipe runs at once, Ban and
-Mute ask first. The account rows in the ☰ menu and in Settings show each account's calling code
+Mute ask first. Right-click a member in a group's member list and **Mute** / **Unmute** sits next to
+Remove from group, applied the moment it is clicked, as on the phone. The account rows in the ☰ menu and in Settings show each account's calling code
 after the name (Quah Kee · +65). It also shows two extra rows in a
 user's profile: **ID** (right-click → Copy ID) and **Account created** (the month estimated from
 that ID), and group and channel profiles get the same **ID** row above the description, in the
