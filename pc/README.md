@@ -1,64 +1,63 @@
 # Run the Chihuahua apps on a Windows PC
 
-This runs all nine Chihuahua Telegram apps on your PC inside Google's free
-Android emulator — the same idea as BlueStacks, but no ads and no third-party
-account. One script does the whole thing.
+All nine Chihuahua apps run on a PC inside Google's free Android emulator, the one that comes
+with Android Studio — the same idea as BlueStacks, without the ads or a third-party account.
+From build 85 on, every APK is **universal** (`arm64-v8a` + `x86_64`): the same file installs on
+the phone and on the PC, runs natively on both, and updates over the top of either.
 
-Since the September/October 2026 builds, every APK is **universal** (`arm64-v8a`
-+ `x86_64`), so the *same* file installs on your phone and on the PC emulator and
-updates over the top of either. Nothing special to download — the script grabs
-the latest release for you.
+There is deliberately **no setup script**. The first version of this folder had one, and Windows
+Defender blocks it ("This script contains malicious content") — to its script scanner, a script
+that downloads tools and then runs them looks like malware. Everything below uses only what
+Android Studio already installed. Don't switch Defender off for any of this.
 
 ## What you need
 
-- 64-bit Windows 10 or 11, ideally 16 GB RAM or more.
-- Hardware virtualization **on** in the BIOS (Intel VT-x / AMD-V, sometimes
-  called SVM), and the Windows **"Windows Hypervisor Platform"** feature turned
-  on. The script checks both and tells you how to switch them on if they're off.
-- About 10 GB of free disk space and a normal broadband connection for the
-  one-time download.
+- Android Studio, set up once with its defaults (free, from developer.android.com/studio). Its
+  setup wizard installs the emulator and `adb`, and creates a virtual phone called
+  **`Medium_Phone`** (x86_64, Google Play). If you made your own phone instead, use its name from
+  Android Studio's Device Manager, with spaces turned into underscores.
+- Virtualization switched on (if `Medium_Phone` has ever started from Android Studio, it is).
 
-## How to run it
+## One time: a desktop icon that opens the phone
 
-1. Download **`Setup-Chihuahua-PC.ps1`** from this folder to, say, your Downloads.
-2. Press **Start**, type **PowerShell**, open **Windows PowerShell**.
-3. Paste this line and press Enter (change the path if you saved it elsewhere):
+Opens the phone on its own, without Android Studio, like BlueStacks.
 
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File "$HOME\Downloads\Setup-Chihuahua-PC.ps1"
+1. Right-click an empty spot on the desktop → **New** → **Shortcut**.
+2. Paste this as the location → **Next**:
+
+   ```
+   %LOCALAPPDATA%\Android\Sdk\emulator\emulator.exe -avd Medium_Phone
    ```
 
-The script will:
+3. Name it **Chihuahua PC** → **Finish**.
 
-1. Find your Android SDK (Android Studio's, if you have it) or download Google's
-   command-line tools into `%LOCALAPPDATA%\Android\Sdk`.
-2. Install the emulator, `adb`, and an Android 14 x86_64 system image.
-3. Create one virtual phone called **Chihuahua_PC** (4 GB RAM, 8 GB storage).
-4. Start it and wait for it to boot (the first boot takes a few minutes).
-5. Download every `Chihuahua*.apk` from the latest release and install all nine
-   on that one virtual phone, side by side — just like on your S26.
+Double-click it: a black log window opens, then the phone. Minimize the black window but don't
+close it — closing it switches the phone off.
 
-When it finishes, the nine apps are in the virtual phone's app drawer. Log in to
-each as you would on a phone.
+## Install or update the apps
 
-## Afterwards
+1. Open the newest **Android** release on the Releases page — the one named
+   *Chihuahua 12.10.1 (build N)*, not a `desktop-v…` one — and click the nine
+   `Chihuahua1` … `Chihuahua9-…apk` files (skip the `SHA256SUMS` ones). If the browser warns,
+   choose **Keep**.
+2. With the phone on and showing its home screen, paste this into PowerShell:
 
-- **Open it again later** without re-running the setup:
+   ```powershell
+   Get-ChildItem "$HOME\Downloads\Chihuahua[1-9]-*.apk" | Group-Object { ($_.Name -split '-')[0] } | ForEach-Object { $_.Group | Sort-Object LastWriteTime | Select-Object -Last 1 } | ForEach-Object { "Installing $($_.Name)"; & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -e install -r $_.FullName }
+   ```
 
-  ```powershell
-  "%LOCALAPPDATA%\Android\Sdk\emulator\emulator.exe" -avd Chihuahua_PC
-  ```
+   Each app prints `Success`. If a Play Protect pop-up appears on the phone, tap
+   **Install anyway**.
 
-- **Update the apps** to a newer release: just run the script again. It keeps the
-  virtual phone and everything logged in on it, and reinstalls the apps over the
-  top.
+Run the same line after every new release. It installs only the **newest** download of each app
+(old copies and `(1)` duplicates in Downloads are ignored), only onto the **emulator** (`-e`, so
+never onto a phone plugged in by USB), and over the top (`-r`), so accounts stay logged in.
 
 ## Good to know
 
-- Each account you log in on the emulator is a **new device session** on that
-  account (manage them in Settings → Chihuahua → Devices, or Telegram's own
-  Devices screen).
-- To Telegram's anti-spam, many accounts run from one PC look the same as many
-  accounts run from one phone. The emulator doesn't change that.
-- If the virtual phone never finishes booting, virtualization is almost always
-  off in the BIOS — that's the first thing to check.
+- Each account you log in on the PC is a **new device session** on that account (manage them in
+  Settings → Chihuahua → Devices, or Telegram's own Devices screen).
+- To Telegram's anti-spam, many accounts run from one PC look the same as many accounts run from
+  one phone. The emulator doesn't change that.
+- Feels slow switching between apps? Android Studio → Device Manager → **⋮** next to the phone →
+  **Edit** → give it 4 GB of RAM.
