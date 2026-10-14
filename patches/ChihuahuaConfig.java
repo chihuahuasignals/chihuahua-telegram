@@ -533,6 +533,53 @@ public class ChihuahuaConfig {
     }
 
     /** On every start: finish any account whose login-time calls did not get through. */
+    // ---------------------------------------------------------------- media cache: as small as possible
+    private static final String CACHE_DEFAULTS_KEY = "cache_defaults_v1";
+
+    /**
+     * Keeps every app's media cache as small as Telegram allows: photos, videos and files are kept
+     * for 1 day (private chats, groups, channels and stories alike) and the whole cache is capped
+     * at 300 MB, the smallest limit Telegram's own cleanup honours. Nothing is lost - the media
+     * stays on Telegram's servers and downloads again when opened. Runs once per install (installs
+     * that already have accounts included), then leaves the values alone so Data and Storage can
+     * still change them.
+     */
+    public static void applyCacheDefaults() {
+        if (ApplicationLoader.applicationContext == null) {
+            return;
+        }
+        try {
+            final SharedPreferences p = prefs();
+            if (p.getBoolean(CACHE_DEFAULTS_KEY, false)) {
+                return;
+            }
+            final int day = CacheByChatsController.KEEP_MEDIA_ONE_DAY;
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                if (!UserConfig.getInstance(a).isClientActivated()) {
+                    continue;
+                }
+                // setKeepMedia also refreshes the controller's in-memory copy, so it applies at once.
+                final CacheByChatsController c = MessagesController.getInstance(a).getCacheByChatsController();
+                for (int type = 0; type < 4; type++) {
+                    c.setKeepMedia(type, day);
+                }
+            }
+            // The values are global; write them directly too, so they hold before any login.
+            final SharedPreferences.Editor e = SharedConfig.getPreferences().edit();
+            for (int type = 0; type < 4; type++) {
+                e.putInt("keep_media_type_" + type, day);
+            }
+            e.putInt("cache_limit", 1); // AutoDeleteMediaTask reads 1 as 300 MB
+            e.apply();
+            p.edit().putBoolean(CACHE_DEFAULTS_KEY, true).apply();
+            // Clean the existing cache now rather than at the next scheduled pass.
+            SharedConfig.lastKeepMediaCheckTime = 0;
+            AutoDeleteMediaTask.run();
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+    }
+
     public static void retryAccountDefaults() {
         load();
         if (!accountDefaults || ApplicationLoader.applicationContext == null) {

@@ -876,6 +876,7 @@ def patch_settings_and_toggles():
         (on_resume, on_resume + "        chihuahuaCheckActivation();\n"
                    "        org.telegram.messenger.ChihuahuaConfig.applyKeepConnected();\n"
                    "        org.telegram.messenger.ChihuahuaConfig.retryAccountDefaults();\n"
+                   "        org.telegram.messenger.ChihuahuaConfig.applyCacheDefaults();\n"
                    "        org.telegram.messenger.ChihuahuaConfig.startAutoJoin();\n"
                    "        ChihuahuaOnboarding.checkPrompts(this);\n", 1),
         (on_create, ACTIVATION_GATE + on_create, 1),
@@ -1049,6 +1050,7 @@ def patch_theme98():
     patch_forward_flow()
     patch_notifications_switch()
     patch_member_mute()
+    patch_media_cache()
 
 
 def patch_forward_flow():
@@ -1963,6 +1965,25 @@ def patch_glass_header():
             ("actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.topPanelChatActivity(resourceProvider));",
              "actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.topPanelChatActivityHeader(resourceProvider));", 1),
         ])
+
+
+def patch_media_cache():
+    """Media cache as small as Telegram allows (the values themselves are set once per install by
+    ChihuahuaConfig.applyCacheDefaults: keep media 1 day for every chat type, cache cap 300 MB).
+    Telegram runs its cleanup when an app is opened but at most once a day; run it at most once an
+    hour so the cap holds through a busy day. And Storage Usage hides the 300 MB limit behind a
+    debug flag although AutoDeleteMediaTask supports it, so without this the slider would show
+    "No limit" for our 300 MB - offer it as the first option."""
+    edit("TMessagesProj/src/main/java/org/telegram/messenger/AutoDeleteMediaTask.java", [
+        ("        if (Math.abs(time - SharedConfig.lastKeepMediaCheckTime) < 24 * 60 * 60) {\n",
+         "        if (Math.abs(time - SharedConfig.lastKeepMediaCheckTime) < 60 * 60) {\n", 1),
+    ])
+    edit("TMessagesProj/src/main/java/org/telegram/ui/CacheControlActivity.java", [
+        ("//                    }\n                    if (totalSizeInGb <= 17) {\n",
+         "//                    }\n                    options.add(1); // Chihuahua: 300 MB, the smallest limit the cleanup honours\n"
+         "                    if (totalSizeInGb <= 17) {\n", 1),
+    ])
+    print("  ok  media cache: cleanup hourly, 300 MB option in Storage Usage")
 
 
 def install_icons():

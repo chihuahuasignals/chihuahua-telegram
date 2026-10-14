@@ -74,6 +74,12 @@ application id differs (`com.chihuahua.messenger`, `…2`, `…3`, `…4`, `…5
 each, their own settings. Install any or all; they update independently from the same release. Each has its own animal on the icon — the dogs, two cats, and both dogs
 together on Chihuahua 9 (Chihuahua 6 shares the kitten of 3 for now).
 
+Every app keeps its **media cache as small as Telegram allows**: photos, videos and files are kept
+for 1 day (private chats, groups, channels, stories), the cache is capped at 300 MB, and the
+cleanup runs every hour instead of once a day. It is set once per install (existing installs get it
+on their next start) and can still be changed under Data and Storage → Storage Usage. Nothing is
+lost: the media stays on Telegram and downloads again when opened.
+
 Every APK is **universal** (`arm64-v8a` + `x86_64`): the one file installs on a phone and on a PC
 Android emulator (BlueStacks-style), and updates over either. `BUILD_ABI` in `config.env` controls
 this — set it back to `arm64-v8a` alone for smaller, phone-only APKs. To run the apps on a Windows
