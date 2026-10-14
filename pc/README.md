@@ -75,6 +75,17 @@ After that, use the desktop icon as usual. The emulator's start-up log shows wha
 using (`hardware-qemu.ini` in the same folder holds the same values). Don't edit this phone in
 Android Studio's Device Manager afterwards — it writes its own values back over these.
 
+If the phone comes back with a dark screen that only lights up after you press its power button,
+make it do a full start every time instead of resuming: in the same `config.ini` set
+
+```
+fastboot.forceColdBoot=yes
+fastboot.forceFastBoot=no
+```
+
+Each start then takes about 30–40 seconds instead of a few, but the screen always comes up on its
+own. Apps and logins are kept — they live on the phone's storage, not in the saved state.
+
 ## Install or update the apps
 
 1. Open the newest **Android** release on the Releases page — the one named
