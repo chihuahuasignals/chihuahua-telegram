@@ -184,7 +184,10 @@ jobs:
           if [ -z "$APK" ]; then echo "::error::No APK produced"; exit 1; fi
           VERSION=$(grep '^APP_VERSION_NAME=' telegram/gradle.properties | cut -d= -f2)
           SAFE_NAME=$(echo "$APP_NAME" | tr -cd '[:alnum:]')
-          NAME="${SAFE_NAME}-${VERSION}-${BUILD_ABI}.apk"
+          # BUILD_ABI may list several chip types (e.g. arm64-v8a,x86_64); a comma is ugly in a
+          # filename/URL, so join them with a hyphen for the name.
+          ABITAG=$(echo "$BUILD_ABI" | tr ',' '-')
+          NAME="${SAFE_NAME}-${VERSION}-${ABITAG}.apk"
           SUMS="SHA256SUMS-${SAFE_NAME}.txt"
           mkdir -p out && cp "$APK" "out/$NAME"
           (cd out && sha256sum "$NAME" | tee "$SUMS")

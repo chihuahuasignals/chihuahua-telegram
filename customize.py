@@ -10,7 +10,7 @@ repository secrets):
   APP_NAME           launcher label                       (default: Chihuahua Telegram)
   APP_PACKAGE        Android application id               (default: com.chihuahua.messenger)
   MAX_ACCOUNTS       accounts the app can hold            (default: 32)
-  BUILD_ABI          arm64-v8a  |  all                    (default: arm64-v8a)
+  BUILD_ABI          arm64-v8a[,x86_64]  |  all           (default: arm64-v8a)
   GRADLE_HEAP        JVM heap for Gradle, e.g. 8g         (default: 8g)
   TG_API_ID          your api_id   from my.telegram.org   (required, secret)
   TG_API_HASH        your api_hash from my.telegram.org   (required, secret)
@@ -80,8 +80,12 @@ def check_inputs():
         sys.exit("TG_API_HASH secret is missing or not a 32-char hex string — add it in GitHub → Settings → Secrets → Actions")
     if not KEYSTORE_PASSWORD:
         sys.exit("KEYSTORE_PASSWORD secret is missing — add it in GitHub → Settings → Secrets → Actions")
-    if BUILD_ABI not in ("arm64-v8a", "armeabi-v7a", "x86_64", "x86", "all"):
-        sys.exit("BUILD_ABI must be arm64-v8a, armeabi-v7a, x86_64, x86 or all")
+    valid_abis = ("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+    if BUILD_ABI != "all":
+        for a in BUILD_ABI.split(","):
+            if a.strip() not in valid_abis:
+                sys.exit("BUILD_ABI must be 'all', or one or more of "
+                         + ", ".join(valid_abis) + " (comma-separated)")
     if not ICONS.is_dir():
         sys.exit(f"icons folder missing at {ICONS}")
 
@@ -235,16 +239,21 @@ def patch_abis():
     if BUILD_ABI == "all":
         print("  --  building all ABIs (slow)")
         return
+    # BUILD_ABI may be one ABI or several, comma-separated: "arm64-v8a" for a phone-only APK,
+    # "arm64-v8a,x86_64" for one APK that also runs on a PC Android emulator (x86_64).
+    abis = [a.strip() for a in BUILD_ABI.split(",") if a.strip()]
+    filters = ", ".join(f'"{a}"' for a in abis)
     edit("TMessagesProj_App/build.gradle", [
         ('abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"',
-         f'abiFilters "{BUILD_ABI}"', 3),
+         f'abiFilters {filters}', 3),
     ])
     # The library module compiles the native code; without a filter it builds all four ABIs.
     edit("TMessagesProj/build.gradle", [
         ("    defaultConfig {\n        minSdkVersion 21\n        targetSdkVersion 36\n",
          "    defaultConfig {\n        minSdkVersion 21\n        targetSdkVersion 36\n"
-         f'        ndk {{ abiFilters "{BUILD_ABI}" }}\n', 1),
+         f'        ndk {{ abiFilters {filters} }}\n', 1),
     ])
+    print(f"  ok  ABIs: {', '.join(abis)}")
 
 
 def patch_google_services():
