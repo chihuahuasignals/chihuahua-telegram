@@ -105,6 +105,20 @@ Run the same line after every new release. It installs only the **newest** downl
 (old copies and `(1)` duplicates in Downloads are ignored), only onto the **emulator** (`-e`, so
 never onto a phone plugged in by USB), and over the top (`-r`), so accounts stay logged in.
 
+## A second phone
+
+Two virtual phones spread the apps out, so one problem can't take everything down. A phone is a
+pointer file plus a folder in `%USERPROFILE%\.android\avd\`: `<name>.ini` (with `path=` and
+`path.rel=` to the folder) and `<name>.avd\config.ini`. Copy the first phone's `config.ini`,
+change `AvdId` and `avd.ini.displayname`, and the emulator builds the phone's storage on its first
+start (1–2 minutes). Android Studio's Device Manager → **+** does the same with clicks. Give it its
+own desktop shortcut (`emulator.exe -avd <name>`), and set its `emulator-user.ini` `window.x` so it
+opens beside the first phone.
+
+Both phones can run at once; each uses its own RAM, so keep the total well inside the PC's memory.
+To install apps on one of them, **have only that phone open**: with two running, `adb -e` can't
+tell which one you mean. Back up both by copying the whole `avd` folder.
+
 ## Good to know
 
 - Each account you log in on the PC is a **new device session** on that account (manage them in
