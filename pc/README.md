@@ -75,6 +75,29 @@ After that, use the desktop icon as usual. The emulator's start-up log shows wha
 using (`hardware-qemu.ini` in the same folder holds the same values). Don't edit this phone in
 Android Studio's Device Manager afterwards — it writes its own values back over these.
 
+### If the phone lags: use Windows Hypervisor Platform
+
+On a fast PC (i9-13900KF, 64 GB, NVMe) the phone still lagged — slow taps, choppy scrolling, freezes
+of a few seconds — while the PC itself sat at ~15%. Inside the phone nearly all the work was
+"system" time (screen drawing alone took a whole core): the cost of every screen update, network
+packet and disk write crossing between the virtual phone and Windows. The emulator was running on
+Google's add-on driver (AEHD), which Google retires on 31 Dec 2026 in favour of Windows' own
+hypervisor. Switching made it smooth at once:
+
+1. Start → type **Turn Windows features on or off** → Enter → tick **Windows Hypervisor Platform**
+   → **OK** → **Restart now**.
+2. Check, in PowerShell:
+
+   ```powershell
+   & "$env:LOCALAPPDATA\Android\Sdk\emulator\emulator.exe" -accel-check
+   ```
+
+   It must say `WHPX(...) is installed and usable.` If it still says `AEHD`, the hypervisor is
+   switched off at boot: `bcdedit /set hypervisorlaunchtype auto` in an admin terminal, restart.
+
+The phones' storage and logins are not touched. Old BlueStacks versions and some games' anti-cheat
+refuse to run with Hyper-V on; untick the box and restart to undo.
+
 If the phone comes back with a dark screen that only lights up after you press its power button,
 make it do a full start every time instead of resuming: in the same `config.ini` set
 
