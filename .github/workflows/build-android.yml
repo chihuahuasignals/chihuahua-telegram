@@ -16,6 +16,7 @@ on:
       - icons7/**
       - icons8/**
       - icons9/**
+      - flags/**
       - .github/workflows/build-android.yml
 
 permissions:
@@ -66,6 +67,90 @@ jobs:
           - id: nine
             prefix: APP9_
             status_branch: build-status-9
+          - id: c1
+            prefix: APP10_
+            status_branch: build-status-c1
+          - id: c595
+            prefix: APP11_
+            status_branch: build-status-c595
+          - id: c54
+            prefix: APP12_
+            status_branch: build-status-c54
+          - id: c44
+            prefix: APP13_
+            status_branch: build-status-c44
+          - id: c62
+            prefix: APP14_
+            status_branch: build-status-c62
+          - id: c65
+            prefix: APP15_
+            status_branch: build-status-c65
+          - id: c57
+            prefix: APP16_
+            status_branch: build-status-c57
+          - id: c46
+            prefix: APP17_
+            status_branch: build-status-c46
+          - id: c237
+            prefix: APP18_
+            status_branch: build-status-c237
+          - id: c972
+            prefix: APP19_
+            status_branch: build-status-c972
+          - id: c968
+            prefix: APP20_
+            status_branch: build-status-c968
+          - id: c856
+            prefix: APP21_
+            status_branch: build-status-c856
+          - id: c852
+            prefix: APP22_
+            status_branch: build-status-c852
+          - id: c387
+            prefix: APP23_
+            status_branch: build-status-c387
+          - id: c386
+            prefix: APP24_
+            status_branch: build-status-c386
+          - id: c370
+            prefix: APP25_
+            status_branch: build-status-c370
+          - id: c358
+            prefix: APP26_
+            status_branch: build-status-c358
+          - id: c351
+            prefix: APP27_
+            status_branch: build-status-c351
+          - id: c357
+            prefix: APP28_
+            status_branch: build-status-c357
+          - id: c84
+            prefix: APP29_
+            status_branch: build-status-c84
+          - id: c66
+            prefix: APP30_
+            status_branch: build-status-c66
+          - id: c60
+            prefix: APP31_
+            status_branch: build-status-c60
+          - id: c55
+            prefix: APP32_
+            status_branch: build-status-c55
+          - id: c56
+            prefix: APP33_
+            status_branch: build-status-c56
+          - id: c31
+            prefix: APP34_
+            status_branch: build-status-c31
+          - id: c34
+            prefix: APP35_
+            status_branch: build-status-c34
+          - id: c33
+            prefix: APP36_
+            status_branch: build-status-c33
+          - id: c27
+            prefix: APP37_
+            status_branch: build-status-c27
 
     name: Build APK (app ${{ matrix.app.id }})
 
@@ -222,7 +307,7 @@ jobs:
             if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then break; fi
             if gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
                  --title "Chihuahua ${{ steps.collect.outputs.version }} (build ${{ github.run_number }})" \
-                 --notes "Nine apps from the same code, install any or all side by side: Chihuahua1-*.apk, Chihuahua2-*.apk, Chihuahua3-*.apk, Chihuahua4-*.apk, Chihuahua5-*.apk, Chihuahua6-*.apk, Chihuahua7-*.apk, Chihuahua8-*.apk and Chihuahua9-*.apk. Telegram ${{ steps.collect.outputs.version }} source, commit ${TELEGRAM_COMMIT:0:10}. Max accounts: ${MAX_ACCOUNTS} each. ABI: ${BUILD_ABI}. Open this page on your phone and tap an .apk to install."; then break; fi
+                 --notes "All the Chihuahua apps from the same code, install any or all side by side. Chihuahua1-*.apk … Chihuahua9-*.apk are the named apps; the apps named by international dialling code (1, 595, 65, …) carry that country's flag as the icon. Telegram ${{ steps.collect.outputs.version }} source, commit ${TELEGRAM_COMMIT:0:10}. Max accounts: ${MAX_ACCOUNTS} each. ABI: ${BUILD_ABI}. Open this page on your phone and tap an .apk to install."; then break; fi
             sleep 5
           done
           gh release upload "$TAG" "${{ steps.collect.outputs.apk }}" "${{ steps.collect.outputs.sums }}" \
