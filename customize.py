@@ -1051,6 +1051,7 @@ def patch_theme98():
     patch_notifications_switch()
     patch_member_mute()
     patch_media_cache()
+    patch_no_number_autofill()
 
 
 def patch_forward_flow():
@@ -1984,6 +1985,22 @@ def patch_media_cache():
          "                    if (totalSizeInGb <= 17) {\n", 1),
     ])
     print("  ok  media cache: cleanup hourly, 300 MB option in Storage Usage")
+
+
+def patch_no_number_autofill():
+    """The first account's login screen starts with an empty phone number. Telegram fills it with
+    the number of the device's SIM card (TelephonyManager.getLine1Number, first account only - "Add
+    account" skips it) and asks for the Phone permission just for that. The PC's virtual phones
+    have a pretend SIM numbered +1 555 123 4567, so every first login started on a fake US number.
+    fillNumber() now returns at once: nothing pre-filled, no permission prompt for it. The country
+    is still pre-selected from Telegram's nearest-DC answer (the country of the connection), and the
+    call-based code checks keep their own permission requests."""
+    edit("TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java", [
+        ("        public void fillNumber() {\n"
+         "            if (numberFilled || activityMode != MODE_LOGIN) {\n",
+         "        public void fillNumber() {\n"
+         "            if (true || numberFilled || activityMode != MODE_LOGIN) { // Chihuahua: never pre-fill the SIM's number\n", 1),
+    ])
 
 
 def install_icons():
