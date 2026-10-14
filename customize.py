@@ -1053,6 +1053,7 @@ def patch_theme98():
     patch_media_cache()
     patch_no_number_autofill()
     patch_no_fullscreen_prompt()
+    patch_no_autodownload_silent()
 
 
 def patch_forward_flow():
@@ -2023,6 +2024,33 @@ def patch_no_fullscreen_prompt():
          '    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" tools:node="remove"/>\n', 1),
     ])
     print("  ok  full-screen alerts: never asked, permission removed")
+
+
+def patch_no_autodownload_silent():
+    """The silent apps never auto-download media. For every logged-in account Telegram fetches the
+    photos, stickers, GIFs, voice notes and small videos of each new message in the background
+    (MessagesStorage.putMessagesInternal -> download queue), with the large Wi-Fi preset on Wi-Fi.
+    With dozens of accounts per app in the same busy groups that is a constant stream of downloads
+    and encrypted disk writes - on the PC's virtual phone it showed as the network and disk work
+    behind the lag (dhcpclient/ksoftirqd/jbd2 busy, iowait, the app processes on top). In
+    NOTIFICATIONS=false builds the three auto-download presets (mobile, Wi-Fi, roaming) are switched
+    off at every launch, so nothing is queued and media loads only when tapped; story, video and
+    music preloading follow the same switches. Chihuahua 1 keeps Telegram's own settings."""
+    if NOTIFICATIONS:
+        print("  ok  auto-download: Telegram's settings (notifying app)")
+        return
+    edit("TMessagesProj/src/main/java/org/telegram/messenger/DownloadController.java", [
+        ("        AndroidUtilities.runOnUIThread(() -> {\n"
+         "            getNotificationCenter().addObserver(DownloadController.this, NotificationCenter.fileLoadFailed);\n",
+         "        // Chihuahua: a silent app never auto-downloads media (see customize.py)\n"
+         "        mobilePreset.enabled = false;\n"
+         "        wifiPreset.enabled = false;\n"
+         "        roamingPreset.enabled = false;\n"
+         "\n"
+         "        AndroidUtilities.runOnUIThread(() -> {\n"
+         "            getNotificationCenter().addObserver(DownloadController.this, NotificationCenter.fileLoadFailed);\n", 1),
+    ])
+    print("  ok  auto-download: off for every account (silent app)")
 
 
 def install_icons():
