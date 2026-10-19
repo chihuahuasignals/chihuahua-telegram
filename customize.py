@@ -54,6 +54,8 @@ AUTO_JOIN = ",".join(n.strip().lstrip("@") for n in os.environ.get("AUTO_JOIN", 
 PROMPT_2FA = os.environ.get("PROMPT_2FA", "").strip().lower() in ("1", "true", "yes", "on")
 # Whether to offer to create a channel after a login.
 PROMPT_CHANNEL = os.environ.get("PROMPT_CHANNEL", "").strip().lower() in ("1", "true", "yes", "on")
+# Whether a login also sets Invites (who may add the account to groups/channels) to Nobody.
+INVITES_NOBODY = os.environ.get("INVITES_NOBODY", "").strip().lower() in ("1", "true", "yes", "on")
 # Whether the app notifies at all (unset = yes). Off builds an app that never posts a notification.
 NOTIFICATIONS = os.environ.get("NOTIFICATIONS", "true").strip().lower() in ("1", "true", "yes", "on")
 
@@ -866,6 +868,7 @@ def patch_settings_and_toggles():
                 .replace("%%AUTO_JOIN%%", java_literal(AUTO_JOIN))
                 .replace("%%PROMPT_2FA%%", "true" if PROMPT_2FA else "false")
                 .replace("%%PROMPT_CHANNEL%%", "true" if PROMPT_CHANNEL else "false")
+                .replace("%%INVITES_NOBODY%%", "true" if INVITES_NOBODY else "false")
                 .replace("%%NOTIFICATIONS%%", "true" if NOTIFICATIONS else "false"))
         (src / sub / name).write_text(text, encoding="utf-8")
     print("  ok  Chihuahua settings classes copied" + (" (activation lock ON)" if activation_hash else " (no activation code set)"))
@@ -2096,6 +2099,7 @@ def write_summary():
         "- After login: " + ", ".join(x for x in (
             "offers Two-Step Verification" if PROMPT_2FA else "",
             "offers to create a channel" if PROMPT_CHANNEL else "",
+            "sets Invites to Nobody" if INVITES_NOBODY else "",
             f"auto-joins {len(AUTO_JOIN.split(','))} groups" if AUTO_JOIN else "") if x) or "nothing extra",
         "- Notifications: " + ("on" if NOTIFICATIONS else "**OFF** (never posts any, permission not requested)"),
     ]

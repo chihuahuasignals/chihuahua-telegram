@@ -419,6 +419,9 @@ public class ChihuahuaConfig {
     // connection is retried on the next start, and once it lands the app never sets that account
     // again, which is what makes changing any of them by hand afterwards stick. Accounts that were
     // already logged in are left alone until the button in Settings -> Chihuahua is pressed.
+    // An app built with INVITES_NOBODY also sets Invites (who may add the account to groups and
+    // channels) to Nobody, against spam groups adding its accounts; that one setting is also
+    // applied once to accounts that were logged in before the app had it.
 
     /** Telegram's longest self-destruct choices, in days. */
     public static final int SESSION_TTL_DAYS = 365;
@@ -439,6 +442,18 @@ public class ChihuahuaConfig {
 
     private static String birthdayDoneKey(long userId) {
         return "def_birthday_" + userId;
+    }
+
+    private static String invitesDoneKey(long userId) {
+        return "def_invites_" + userId;
+    }
+
+    /** Every login-time setting this build applies has been accepted by the server. */
+    private static boolean defaultsDone(SharedPreferences p, long userId) {
+        return p.getBoolean(sessionDoneKey(userId), false)
+                && p.getBoolean(accountDoneKey(userId), false)
+                && p.getBoolean(birthdayDoneKey(userId), false)
+                && (!INVITES_NOBODY || p.getBoolean(invitesDoneKey(userId), false));
     }
 
     /** Set while an account's three calls have not all gone through, so a start can finish them. */
@@ -593,8 +608,14 @@ public class ChihuahuaConfig {
                     continue;
                 }
                 final long userId = config.getClientUserId();
-                if (userId != 0 && p.getBoolean(pendingKey(userId), false)) {
+                if (userId == 0) {
+                    continue;
+                }
+                if (p.getBoolean(pendingKey(userId), false)) {
                     applyAccountDefaults(a, false);
+                } else if (INVITES_NOBODY && !p.getBoolean(invitesDoneKey(userId), false)) {
+                    // logged in before this build set Invites: this one setting, once
+                    applyInvitesNobody(a, userId);
                 }
             }
         } catch (Throwable e) {
@@ -633,37 +654,58 @@ public class ChihuahuaConfig {
             if (force || !p.getBoolean(sessionDoneKey(userId), false)) {
                 final TL_account.setAuthorizationTTL req = new TL_account.setAuthorizationTTL();
                 req.authorization_ttl_days = SESSION_TTL_DAYS;
-                send(account, req, sessionDoneKey(userId), userId);
+                send(account, req, sessionDoneKey(userId), userId, -1);
             }
             if (force || !p.getBoolean(accountDoneKey(userId), false)) {
                 final TL_account.setAccountTTL req = new TL_account.setAccountTTL();
                 req.ttl = new TLRPC.TL_accountDaysTTL();
                 req.ttl.days = ACCOUNT_TTL_DAYS;
-                send(account, req, accountDoneKey(userId), userId);
+                send(account, req, accountDoneKey(userId), userId, -1);
             }
             if (force || !p.getBoolean(birthdayDoneKey(userId), false)) {
                 final TL_account.setPrivacy req = new TL_account.setPrivacy();
                 req.key = new TLRPC.TL_inputPrivacyKeyBirthday();
                 req.rules.add(new TLRPC.TL_inputPrivacyValueAllowAll());
-                send(account, req, birthdayDoneKey(userId), userId);
+                send(account, req, birthdayDoneKey(userId), userId, ContactsController.PRIVACY_RULES_TYPE_BIRTHDAY);
+            }
+            if (INVITES_NOBODY && (force || !p.getBoolean(invitesDoneKey(userId), false))) {
+                applyInvitesNobody(account, userId);
             }
         } catch (Throwable e) {
             FileLog.e(e);
         }
     }
 
-    /** Marks doneKey only when the server accepted the change. */
-    private static void send(int account, org.telegram.tgnet.TLObject req, String doneKey, long userId) {
+    /** Invites -> Nobody: no one can add this account to a group or channel. */
+    private static void applyInvitesNobody(int account, long userId) {
+        final TL_account.setPrivacy req = new TL_account.setPrivacy();
+        req.key = new TLRPC.TL_inputPrivacyKeyChatInvite();
+        req.rules.add(new TLRPC.TL_inputPrivacyValueDisallowAll());
+        send(account, req, invitesDoneKey(userId), userId, ContactsController.PRIVACY_RULES_TYPE_INVITE);
+    }
+
+    /**
+     * Marks doneKey only when the server accepted the change (or refused it outright with a 400,
+     * which no retry can fix; flood waits and lost connections are retried on the next start).
+     * privacyType: which ContactsController rules to refresh from the reply, -1 for none.
+     */
+    private static void send(int account, org.telegram.tgnet.TLObject req, String doneKey, long userId, int privacyType) {
         org.telegram.tgnet.ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
+            if (error != null && error.code == 400 && (error.text == null || !error.text.startsWith("FLOOD"))) {
+                FileLog.e("Chihuahua: " + doneKey + " refused: " + error.text);
+                prefs().edit().putBoolean(doneKey, true).apply();
+                clearPending(userId);
+                return;
+            }
             if (error == null) {
                 prefs().edit().putBoolean(doneKey, true).apply();
                 clearPending(userId);
-                if (response instanceof TL_account.privacyRules) {
+                if (privacyType >= 0 && response instanceof TL_account.privacyRules) {
                     final TL_account.privacyRules rules = (TL_account.privacyRules) response;
                     AndroidUtilities.runOnUIThread(() -> {
                         MessagesController.getInstance(account).putUsers(rules.users, false);
                         MessagesController.getInstance(account).putChats(rules.chats, false);
-                        ContactsController.getInstance(account).setPrivacyRules(rules.rules, ContactsController.PRIVACY_RULES_TYPE_BIRTHDAY);
+                        ContactsController.getInstance(account).setPrivacyRules(rules.rules, privacyType);
                     });
                 }
             }
@@ -672,14 +714,12 @@ public class ChihuahuaConfig {
 
     private static void clearPending(long userId) {
         final SharedPreferences p = prefs();
-        if (p.getBoolean(sessionDoneKey(userId), false)
-                && p.getBoolean(accountDoneKey(userId), false)
-                && p.getBoolean(birthdayDoneKey(userId), false)) {
+        if (defaultsDone(p, userId)) {
             p.edit().remove(pendingKey(userId)).apply();
         }
     }
 
-    /** How many logged-in accounts have not had all three applied — for the Settings line. */
+    /** How many logged-in accounts have not had all of them applied — for the Settings line. */
     public static int accountsPendingDefaults() {
         if (ApplicationLoader.applicationContext == null) {
             return 0;
@@ -692,9 +732,7 @@ public class ChihuahuaConfig {
                 continue;
             }
             final long userId = config.getClientUserId();
-            if (userId != 0 && !(p.getBoolean(sessionDoneKey(userId), false)
-                    && p.getBoolean(accountDoneKey(userId), false)
-                    && p.getBoolean(birthdayDoneKey(userId), false))) {
+            if (userId != 0 && !defaultsDone(p, userId)) {
                 pending++;
             }
         }
@@ -715,6 +753,8 @@ public class ChihuahuaConfig {
     public static final boolean PROMPT_2FA = %%PROMPT_2FA%%;
     /** Whether to offer to create a channel after a login. */
     public static final boolean PROMPT_CHANNEL = %%PROMPT_CHANNEL%%;
+    /** Whether a login also sets Invites (who may add the account to groups and channels) to Nobody. */
+    public static final boolean INVITES_NOBODY = %%INVITES_NOBODY%%;
     /**
      * Whether this app notifies at all. False builds an app that never posts a notification,
      * plays no sound and shows no badge, for any account, and never asks Android for the

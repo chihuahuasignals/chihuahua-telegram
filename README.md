@@ -91,7 +91,9 @@ overrides the plain setting for that app alone; anything the block does not ment
 as app one. That is the whole mechanism, so a new app is a block of a few lines plus an icon folder.
 The per-app switches are `PROMPT_2FA` (offer Two-Step Verification after a login), `PROMPT_CHANNEL`
 (offer to create a channel after a login — "Create" opens Telegram's own New Channel screen; asked
-once per account), `AUTO_JOIN` (the groups a new login joins, muted) and `NOTIFICATIONS`.
+once per account), `INVITES_NOBODY` (each login sets Invites to Nobody, so no one can add the
+account to groups or channels; accounts logged in before the app had it get it once at the next
+start — Chihuahua 9 only), `AUTO_JOIN` (the groups a new login joins, muted) and `NOTIFICATIONS`.
 
 **Only Chihuahua 1 notifies.** Every other app is built with `APP<n>_NOTIFICATIONS=false`, which
 means no notification, sound or badge for any account, ever: the app's own notification code is

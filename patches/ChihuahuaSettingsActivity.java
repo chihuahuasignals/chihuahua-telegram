@@ -116,7 +116,9 @@ public class ChihuahuaSettingsActivity extends BaseFragment {
         if (!ChihuahuaConfig.autoJoinStatus().isEmpty()) {
             items.add(UItem.asButton(ID_JOIN_STATUS, "Groups joined automatically", ChihuahuaConfig.autoJoinStatus()));
         }
-        items.add(UItem.asShadow("Each account that logs in from now on is set once to sessions 1 year, account 24 months and birthday visible to everybody — against Telegram's 6 months, 18 months and contacts only. All three are on that account's Setup tab; change one by hand and it stays changed, because the app only ever sets an account once. Accounts already logged in are untouched until you press the button."));
+        items.add(UItem.asShadow("Each account that logs in from now on is set once to sessions 1 year, account 24 months and birthday visible to everybody — against Telegram's 6 months, 18 months and contacts only."
+                + (ChihuahuaConfig.INVITES_NOBODY ? " Invites are set to Nobody too, so no one can add the account to a group or channel; this one is also set once on accounts that were already logged in." : "")
+                + " All of these are on that account's Setup tab; change one by hand and it stays changed, because the app only ever sets an account once. Otherwise, accounts already logged in are untouched until you press the button."));
 
         int activated = 0;
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
