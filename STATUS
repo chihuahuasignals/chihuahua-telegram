@@ -1,0 +1,9 @@
+result=success
+run=95
+run_url=https://github.com/chihuahuasignals/chihuahua-telegram/actions/runs/41183207015
+commit=09d9ca9b657317acaeb446b57b06655c0c3222d7
+app=c358
+apk=358-12.10.1-arm64-v8a-x86_64.apk
+version=12.10.1
+finished=2026-10-31T09:03:15Z
+steps=checkout:success config:success secrets:success disk:success java:success sdk:success source:success customize:success key:success gradle:success collect:success artifact:success release:success
