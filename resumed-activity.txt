@@ -1,0 +1,2 @@
+    topResumedActivity=ActivityRecord{2e1340 u0 com.chihuahua.messenger/org.telegram.messenger.DefaultIcon t8}
+  ResumedActivity: ActivityRecord{2e1340 u0 com.chihuahua.messenger/org.telegram.messenger.DefaultIcon t8}
