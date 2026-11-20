@@ -272,7 +272,16 @@ jobs:
         run: |
           set -o pipefail
           chmod +x gradlew
-          ./gradlew :TMessagesProj_App:assembleAfatRelease --no-daemon --stacktrace --console=plain 2>&1 | tee ../build.log
+          # Maven Central answers "429 Too Many Requests" when ~20 of these jobs fetch the same
+          # libraries at once (build 98 lost two apps that way in their first minute). A failure
+          # to download gets two more tries after a pause; what did download stays in ~/.gradle,
+          # so a retry only fetches the rest. Any other failure (a compile error) stops at once.
+          for i in 1 2 3; do
+            if ./gradlew :TMessagesProj_App:assembleAfatRelease --no-daemon --stacktrace --console=plain 2>&1 | tee ../build.log; then exit 0; fi
+            if [ "$i" = 3 ] || ! grep -qE 'status code 429|Could not GET|Could not resolve all|Could not download|Could not parse POM|Read timed out|Connect timed out|Connection reset' ../build.log; then exit 1; fi
+            echo "::warning::Gradle could not download its libraries (attempt $i), retrying in $((i * 90)) s"
+            sleep $((i * 90))
+          done
 
       - name: Collect APK
         id: collect
